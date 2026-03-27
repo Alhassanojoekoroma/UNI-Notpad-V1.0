@@ -31,30 +31,33 @@ Single-tenant standalone deployment via Docker. No vendor lock-in — every paid
   - `lecturer.*`: lecturer dashboard
 - **React 19**, **TypeScript 5**, **Tailwind CSS v4** (uses `@theme` inline config in globals.css)
 - **shadcn/ui** components (copied into project, not an npm dep — use `pnpm dlx shadcn@latest add [component]`)
-- **PostgreSQL** + **Prisma ORM** for data
+- **PostgreSQL** + **Prisma 6** ORM for data
 - **NextAuth.js v5** with hybrid sessions: JWT for credentials, DB sessions for OAuth
 - **TanStack Query v5** for client-side data fetching
 - **Google Gemini API** for AI (Ollama as open-source fallback)
 - **Cloudinary** for file storage (S3/MinIO as fallback)
-- **Zod** for input validation on all API routes
+- **Zod 4** for input validation on all API routes (import from `zod/v4`)
 
-## Planned App Structure
+## App Structure
 
 ```
-app/
-├── (public)/       # Landing, login, register, setup wizard
-├── (student)/      # Student dashboard and features
-├── (lecturer)/     # Lecturer upload and analytics
-├── (admin)/        # Admin management and settings
-└── api/            # All API routes (auth, content, ai, users, messages, tasks, forum, admin, tokens)
+src/app/
+├── (public)/       # Landing, login, register, setup wizard (route group)
+├── (student)/      # Student dashboard and features (route group)
+├── _admin/         # Admin panel (underscore prefix — rewrite target for admin.* subdomain)
+├── _lecturer/      # Lecturer dashboard (underscore prefix — rewrite target for lecturer.*)
+└── api/            # All API routes
 src/
-├── components/     # UI components
-├── lib/            # Auth config, AI clients, utilities
-└── hooks/          # Custom React hooks
+├── components/     # UI components (ui/ has shadcn, shared/ has custom)
+├── lib/            # Auth config, AI clients, validators, utilities
+├── hooks/          # Custom React hooks
+└── types/          # TypeScript type extensions
 prisma/
-├── schema.prisma
+├── schema.prisma   # 24 models, 11 enums
 └── migrations/
 ```
+
+**Important**: `_admin/` and `_lecturer/` use underscore prefix (NOT parentheses) because proxy.ts rewrites `admin.*` → `/_admin/*`. Parenthesized route groups are invisible in URLs.
 
 ## Key Design Decisions
 

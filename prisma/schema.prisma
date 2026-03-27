@@ -1,0 +1,598 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── NextAuth required models ───
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Application models ───
+
+enum UserRole {
+  STUDENT
+  LECTURER
+  ADMIN
+}
+
+enum ContentStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+enum ContentType {
+  LECTURE_NOTES
+  ASSIGNMENT
+  TIMETABLE
+  TUTORIAL
+  PROJECT
+  LAB
+  OTHER
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+enum FlagStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+}
+
+enum TransactionType {
+  PURCHASE
+  USAGE
+  BONUS
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  NEW_CONTENT
+  MESSAGE_RECEIVED
+  TASK_DEADLINE
+  REFERRAL_BONUS
+  CONTENT_FLAGGED
+  REPORT_RESOLVED
+  SYSTEM
+}
+
+model User {
+  id                   String    @id @default(cuid())
+  name                 String?
+  email                String?   @unique
+  emailVerified        DateTime?
+  image                String?
+  password             String? // bcrypt hash, null for OAuth users
+  role                 UserRole  @default(STUDENT)
+  facultyId            String?
+  semester             Int?
+  programId            String?
+  studentId            String?   @unique
+  avatarUrl            String?
+  termsAccepted        Boolean   @default(false)
+  privacyAccepted      Boolean   @default(false)
+  referralCode         String?   @unique
+  freeQueriesRemaining Int       @default(20)
+  freeQueriesResetAt   DateTime?
+  isActive             Boolean   @default(true)
+  isSuspended          Boolean   @default(false)
+  suspendedReason      String?
+  dateOfBirth          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // Application relations
+  faculty              Faculty?          @relation(fields: [facultyId], references: [id])
+  program              Program?          @relation(fields: [programId], references: [id])
+  content              Content[]         @relation("ContentAuthor")
+  contentAccess        ContentAccess[]
+  contentRatings       ContentRating[]
+  aiInteractions       AIInteraction[]
+  sentMessages         Message[]         @relation("MessageSender")
+  receivedMessages     Message[]         @relation("MessageRecipient")
+  blockedUsers         UserBlock[]       @relation("Blocker")
+  blockedBy            UserBlock[]       @relation("Blocked")
+  tasks                Task[]
+  taskInvitationsSent  TaskInvitation[]  @relation("Inviter")
+  scheduleEntries      Schedule[]
+  tokenBalance         TokenBalance?
+  tokenTransactions    TokenTransaction[]
+  referralsMade        Referral[]        @relation("Referrer")
+  referralsReceived    Referral[]        @relation("Referee")
+  quizScores           QuizScore[]
+  learningGoals        LearningGoal[]
+  forumPosts           ForumPost[]
+  forumVotes           ForumVote[]
+  contentFlags         ContentFlag[]     @relation("FlagReporter")
+  contentFlagsReviewed ContentFlag[]     @relation("FlagReviewer")
+  userReportsFiled     UserReport[]      @relation("Reporter")
+  userReportsReceived  UserReport[]      @relation("Reported")
+  userReportsReviewed  UserReport[]      @relation("ReportReviewer")
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([facultyId, semester])
+}
+
+model Faculty {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  programs   Program[]
+  users      User[]
+  content    Content[]
+  forumPosts ForumPost[]
+}
+
+model Program {
+  id        String   @id @default(cuid())
+  facultyId String
+  name      String
+  code      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  faculty Faculty   @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  users   User[]
+  content Content[]
+
+  @@unique([facultyId, code])
+}
+
+model Content {
+  id            String        @id @default(cuid())
+  title         String
+  description   String?
+  fileUrl       String
+  filePublicId  String? // Cloudinary public_id for deletion
+  fileType      String // pdf, pptx, docx, jpeg, png
+  fileSize      Int // bytes
+  facultyId     String
+  semester      Int
+  programId     String?
+  module        String
+  moduleCode    String?
+  contentType   ContentType
+  lecturerId    String
+  viewCount     Int           @default(0)
+  downloadCount Int           @default(0)
+  averageRating Float?
+  status        ContentStatus @default(ACTIVE)
+  version       Int           @default(1)
+  tutorialLink  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  faculty  Faculty         @relation(fields: [facultyId], references: [id])
+  program  Program?        @relation(fields: [programId], references: [id])
+  lecturer User            @relation("ContentAuthor", fields: [lecturerId], references: [id])
+  access   ContentAccess[]
+  ratings  ContentRating[]
+  flags    ContentFlag[]
+
+  @@index([facultyId, semester])
+  @@index([lecturerId])
+  @@index([status])
+}
+
+model ContentAccess {
+  id         String   @id @default(cuid())
+  contentId  String
+  userId     String
+  accessType String // "view" or "download"
+  createdAt  DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([userId])
+}
+
+model ContentRating {
+  id           String   @id @default(cuid())
+  contentId    String
+  userId       String
+  rating       Int // 1-5
+  feedbackText String?
+  createdAt    DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, userId])
+}
+
+model AIInteraction {
+  id                 String   @id @default(cuid())
+  userId             String
+  conversationId     String // groups messages in a conversation
+  query              String   @db.Text
+  response           String   @db.Text
+  sourceContentIds   String[] // array of Content IDs used as context
+  queryType          String // "chat", "study_guide", "quiz", etc.
+  learningLevel      String? // "beginner", "intermediate", "advanced"
+  satisfactionRating Int? // 1-5
+  responseTimeMs     Int?
+  tokensUsed         Int      @default(1)
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  recipientId String
+  subject     String
+  body        String   @db.Text
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sender    User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, isRead])
+  @@index([senderId])
+}
+
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  deadline    DateTime?
+  priority    Priority   @default(MEDIUM)
+  status      TaskStatus @default(PENDING)
+  tags        String[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitations TaskInvitation[]
+
+  @@index([userId, status])
+}
+
+model TaskInvitation {
+  id           String   @id @default(cuid())
+  taskId       String
+  inviterId    String
+  inviteeEmail String
+  status       String   @default("pending") // pending, accepted, declined
+  createdAt    DateTime @default(now())
+
+  task    Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  inviter User @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, inviteeEmail])
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  userId    String
+  dayOfWeek Int // 0=Sunday, 6=Saturday
+  startTime String // "08:00"
+  endTime   String // "10:00"
+  subject   String
+  location  String?
+  type      String? // "lecture", "tutorial", "lab"
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model TokenBalance {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  available Int      @default(0)
+  used      Int      @default(0)
+  total     Int      @default(0)
+  bonus     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TokenTransaction {
+  id               String            @id @default(cuid())
+  userId           String
+  amount           Int
+  type             TransactionType
+  paymentProvider  String? // "monime", "stripe"
+  paymentReference String?
+  status           TransactionStatus @default(PENDING)
+  metadata         Json?
+  createdAt        DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([paymentReference])
+}
+
+model Referral {
+  id            String   @id @default(cuid())
+  referrerId    String
+  refereeId     String
+  tokensAwarded Int      @default(0)
+  status        String   @default("pending") // pending, completed
+  createdAt     DateTime @default(now())
+
+  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  User @relation("Referee", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, refereeId])
+}
+
+model QuizScore {
+  id             String   @id @default(cuid())
+  userId         String
+  module         String
+  quizType       String // "mcq", "true_false", "fill_blanks", "matching"
+  score          Int
+  totalQuestions Int
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LearningGoal {
+  id              String     @id @default(cuid())
+  userId          String
+  title           String
+  description     String?
+  targetDate      DateTime?
+  status          GoalStatus @default(ACTIVE)
+  progressPercent Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ForumPost {
+  id               String      @id @default(cuid())
+  module           String
+  facultyId        String
+  authorId         String
+  title            String? // null for replies
+  body             String      @db.Text
+  isPinned         Boolean     @default(false)
+  parentId         String? // null = top-level post, else reply
+  upvoteCount      Int         @default(0)
+  isAcceptedAnswer Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  faculty Faculty     @relation(fields: [facultyId], references: [id])
+  author  User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  ForumPost?  @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies ForumPost[] @relation("PostReplies")
+  votes   ForumVote[]
+
+  @@index([module, facultyId])
+  @@index([parentId])
+}
+
+model ForumVote {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model ContentFlag {
+  id         String     @id @default(cuid())
+  contentId  String
+  reporterId String
+  reason     String
+  status     FlagStatus @default(PENDING)
+  adminNotes String?
+  reviewedBy String?
+  createdAt  DateTime   @default(now())
+  resolvedAt DateTime?
+
+  content  Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  reporter User    @relation("FlagReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer User?   @relation("FlagReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([status])
+}
+
+model UserReport {
+  id             String       @id @default(cuid())
+  reportedUserId String
+  reporterId     String
+  reason         String
+  context        String? // message_id or post_id for reference
+  status         ReportStatus @default(PENDING)
+  adminNotes     String?
+  actionTaken    String?
+  reviewedBy     String?
+  createdAt      DateTime     @default(now())
+  resolvedAt     DateTime?
+
+  reportedUser User  @relation("Reported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reporter     User  @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer     User? @relation("ReportReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([status])
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  userId        String
+  type          NotificationType
+  title         String
+  body          String
+  isRead        Boolean          @default(false)
+  referenceType String? // "content", "message", "task", etc.
+  referenceId   String?
+  createdAt     DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model LecturerCode {
+  id           String    @id @default(cuid())
+  code         String    @unique // stored as bcrypt hash
+  facultyId    String?
+  lecturerName String
+  isActive     Boolean   @default(true)
+  createdBy    String // admin user ID
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String // "user.role_changed", "content.removed", "user.suspended", etc.
+  entityType String // "user", "content", "flag", "report"
+  entityId   String
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AppSettings {
+  id                  String   @id @default("default")
+  universityName      String   @default("University")
+  universityLogo      String?
+  primaryColor        String   @default("#7c3aed")
+  secondaryColor      String   @default("#1e1e1e")
+  domain              String?
+  studentIdPattern    String   @default("^90500\\d{4,}$")
+  maxSemesters        Int      @default(8)
+  termsOfService      String?  @db.Text
+  privacyPolicy       String?  @db.Text
+  codeOfConduct       String?  @db.Text
+  contentPolicy       String?  @db.Text
+  geminiModel         String   @default("gemini-2.0-flash")
+  geminiApiKey        String?
+  elevenlabsApiKey    String?
+  resendApiKey        String?
+  monimeApiKey        String?
+  stripeSecretKey     String?
+  cloudinaryCloudName String?
+  cloudinaryApiKey    String?
+  cloudinaryApiSecret String?
+  freeQueriesPerDay   Int      @default(20)
+  freeSuspensionHours Int      @default(7)
+  referralBonusTokens Int      @default(5)
+  tokenPackages       Json? // [{amount: 10, priceSLE: 50, priceUSD: 2}, ...]
+  isSetupComplete     Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
