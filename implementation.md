@@ -1491,87 +1491,87 @@ The most complex feature. Build it after Phase 2 so you have content in the data
 
 ### 4.1 Lecturer layout
 
-- [ ] Create lecturer sidebar: Dashboard, Upload Content, Manage Content, Analytics, Messages, Settings
-- [ ] Create lecturer layout at `src/app/_lecturer/layout.tsx` with role guard (LECTURER only)
-- [ ] Lecturer accesses via `lecturer.localhost:3000` in dev
+- [x] Create lecturer sidebar: Dashboard, Upload Content, Manage Content, Analytics, Messages, Settings
+- [x] Create lecturer layout at `src/app/_lecturer/layout.tsx` with role guard (LECTURER only)
+- [x] Lecturer accesses via `lecturer.localhost:3000` in dev
 
 ### 4.2 Lecturer dashboard
 
-- [ ] Build dashboard at `src/app/_lecturer/dashboard/page.tsx`:
+- [x] Build dashboard at `src/app/_lecturer/dashboard/page.tsx`:
   - Stats cards: total content uploaded, total views, total downloads, total ratings
   - Recent uploads list (last 5) with per-item view/download count
   - Quick actions: Upload Content, Manage Content, View Analytics, Send Message
 
 ### 4.3 Content upload
 
-- [ ] Build upload page at `src/app/_lecturer/upload/page.tsx`
-- [ ] API route: `POST /api/content`:
+- [x] Build upload page at `src/app/_lecturer/upload/page.tsx`
+- [x] API route: `POST /api/lecturer/content`:
   1. Validate input with Zod (title, module, faculty, semester, program, contentType required)
   2. Verify caller is LECTURER
   3. Upload file to Cloudinary (validate file type: pdf, pptx, docx, jpeg, png; validate size <= 50MB)
   4. Create Content record with fileUrl, filePublicId, fileType, fileSize
   5. Create Notification for students in matching faculty/semester
   6. Return created content
-- [ ] Upload form UI:
-  - [ ] Title input
-  - [ ] Module / course name input
-  - [ ] Module code input (optional)
-  - [ ] Faculty dropdown (from Faculty table)
-  - [ ] Semester dropdown (1 to maxSemesters from AppSettings)
-  - [ ] Program dropdown (dynamic, filtered by selected faculty)
-  - [ ] Content type select (lecture notes, assignment, timetable, tutorial, project, lab, other)
-  - [ ] Description textarea (max 500 chars, char counter)
-  - [ ] Tutorial link input (optional URL)
-  - [ ] File upload dropzone with drag-and-drop, file type validation, size display
-  - [ ] Submit button with loading state
-  - [ ] Success redirect to content management page
+- [x] Upload form UI:
+  - [x] Title input
+  - [x] Module / course name input
+  - [x] Module code input (optional)
+  - [x] Faculty dropdown (from Faculty table)
+  - [x] Semester dropdown (1 to maxSemesters from AppSettings)
+  - [x] Program dropdown (dynamic, filtered by selected faculty)
+  - [x] Content type select (lecture notes, assignment, timetable, tutorial, project, lab, other)
+  - [x] Description textarea (max 500 chars, char counter)
+  - [x] Tutorial link input (optional URL)
+  - [x] File upload dropzone with drag-and-drop, file type validation, size display
+  - [x] Submit button with loading state
+  - [x] Success redirect to content management page
 
 ### 4.4 Content management
 
-- [ ] Build content management page at `src/app/_lecturer/content/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/content?lecturerId=ME` -- list lecturer's own content
-  - [ ] `PATCH /api/content/[id]` -- update metadata (verify ownership)
-  - [ ] `DELETE /api/content/[id]` -- soft-delete (set status to ARCHIVED, verify ownership)
-- [ ] Content management UI:
-  - [ ] Status filter tabs: All / Active / Draft / Archived
-  - [ ] Search by title
-  - [ ] Content table: title, module, type, status, views, downloads, rating, date
-  - [ ] Edit button -> dialog with editable fields (title, module, description, tutorial link, status)
-  - [ ] Archive button with confirmation
-  - [ ] Version indicator (increments on edit)
+- [x] Build content management page at `src/app/_lecturer/content/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/lecturer/content` -- list lecturer's own content
+  - [x] `PATCH /api/lecturer/content/[id]` -- update metadata (verify ownership)
+  - [x] `DELETE /api/lecturer/content/[id]` -- soft-delete (set status to ARCHIVED, verify ownership)
+- [x] Content management UI:
+  - [x] Status filter tabs: All / Active / Draft / Archived
+  - [x] Search by title
+  - [x] Content table: title, module, type, status, views, downloads, rating, date
+  - [x] Edit button -> dialog with editable fields (title, module, description, tutorial link, status)
+  - [x] Archive button with confirmation
+  - [x] Version indicator (increments on edit)
 
 ### 4.5 Lecturer analytics
 
-- [ ] Build analytics page at `src/app/_lecturer/analytics/page.tsx`
-- [ ] API route: `GET /api/content/analytics` -- aggregated stats for current lecturer:
+- [x] Build analytics page at `src/app/_lecturer/analytics/page.tsx`
+- [x] API route: `GET /api/lecturer/analytics` -- aggregated stats for current lecturer:
   - Total views, downloads, materials count
   - Most-viewed content (top 10)
   - Recent downloads (last 20)
   - Per-content stats table
   - Content type breakdown counts
   - Engagement over time (group by week/month)
-- [ ] Analytics UI:
-  - [ ] Summary stat cards
-  - [ ] Most-viewed content list with bar indicators
-  - [ ] Recent downloads list with timestamps
-  - [ ] Full stats table (sortable by views, downloads, rating)
-  - [ ] Pie chart: content type breakdown. Use a lightweight chart library: `pnpm add recharts`
-  - [ ] Line chart: views over time (weekly)
+- [x] Analytics UI:
+  - [x] Summary stat cards
+  - [x] Most-viewed content list with bar indicators
+  - [x] Recent downloads list with timestamps
+  - [x] Full stats table (sortable by views, downloads, rating)
+  - [x] Pie chart: content type breakdown. Use a lightweight chart library: `pnpm add recharts`
+  - [x] Line chart: views over time (weekly)
 
 ### 4.6 Lecturer messaging and settings
 
-- [ ] Reuse messaging components from Phase 2 (same API, same UI, just in lecturer layout)
-- [ ] Reuse settings page structure from Phase 2 (profile, notifications, data export, account deletion)
+- [x] Reuse messaging components from Phase 2 (same API, same UI, just in lecturer layout)
+- [x] Reuse settings page structure from Phase 2 (profile, notifications, data export, account deletion)
 
 ### Phase 4 verification
 
-- [ ] Lecturer can upload files to Cloudinary and see them in content management
-- [ ] File type and size validation works
-- [ ] Content metadata can be edited and status changed
-- [ ] Students receive notifications when new content is uploaded to their faculty/semester
-- [ ] Analytics show correct view/download counts
-- [ ] Charts render with real data
+- [x] Lecturer can upload files to Cloudinary and see them in content management
+- [x] File type and size validation works
+- [x] Content metadata can be edited and status changed
+- [x] Students receive notifications when new content is uploaded to their faculty/semester
+- [x] Analytics show correct view/download counts
+- [x] Charts render with real data
 
 ---
 
