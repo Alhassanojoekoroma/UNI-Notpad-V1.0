@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { LecturerLayoutClient } from "./layout-client";
 
 export default async function LecturerLayout({
   children,
@@ -16,5 +17,5 @@ export default async function LecturerLayout({
     redirect("/");
   }
 
-  return <>{children}</>;
+  return <LecturerLayoutClient>{children}</LecturerLayoutClient>;
 }
