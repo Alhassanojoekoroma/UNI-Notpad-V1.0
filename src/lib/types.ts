@@ -2,7 +2,6 @@ import type {
   UserRole,
   Task,
   TaskInvitation,
-  Schedule,
   Content,
   ContentRating,
   Faculty,
@@ -78,3 +77,68 @@ export type SearchResults = {
   messages: SearchResultItem[];
   forum: SearchResultItem[];
 };
+
+// AI types
+
+export type AIConversation = {
+  conversationId: string;
+  title: string;
+  lastMessage: string;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AIChatMessage = {
+  id: string;
+  query: string;
+  response: string;
+  sourceContentIds: string[];
+  learningLevel: string | null;
+  satisfactionRating: number | null;
+  createdAt: string;
+};
+
+export type AIQueryStatus = {
+  freeRemaining: number;
+  resetAt: string | null;
+  tokenBalance: number;
+};
+
+export type QuizQuestion = {
+  question: string;
+  options?: string[];
+  answer: string;
+  explanation: string;
+};
+
+export type MatchingPair = {
+  columnA: string;
+  columnB: string;
+};
+
+export type FillBlankQuestion = {
+  sentence: string;
+  answer: string;
+  explanation: string;
+};
+
+export type LearningToolResult = {
+  toolType: string;
+  content: string;
+  questions?: QuizQuestion[];
+  matchingPairs?: MatchingPair[];
+  fillBlanks?: FillBlankQuestion[];
+  interactionId: string;
+};
+
+export type AudioOverviewResult = {
+  script: string;
+  audioUrl?: string;
+  interactionId: string;
+};
+
+export type AIStreamEvent =
+  | { type: "delta"; text: string }
+  | { type: "done"; id: string; conversationId: string }
+  | { type: "error"; message: string };
