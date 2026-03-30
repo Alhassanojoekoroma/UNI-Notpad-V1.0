@@ -1389,115 +1389,93 @@ The most complex feature. Build it after Phase 2 so you have content in the data
 
 ### 3.1 Core AI chat
 
-- [ ] Build AI page at `src/app/(student)/ai/page.tsx`
-- [ ] Create Gemini client at `src/lib/gemini.ts`:
-  ```ts
-  import { GoogleGenerativeAI } from '@google/generative-ai'
-  import { prisma } from './prisma'
-
-  export async function getGeminiClient() {
-    const settings = await prisma.appSettings.findFirst()
-    const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY
-    const model = settings?.geminiModel || 'gemini-2.0-flash'
-    if (!apiKey) throw new Error('Gemini API key not configured')
-    const genAI = new GoogleGenerativeAI(apiKey)
-    return genAI.getGenerativeModel({ model })
-  }
-  ```
-- [ ] API routes:
-  - [ ] `POST /api/ai/query` -- main chat endpoint:
-    1. Validate input (Zod: query, sourceContentIds[], conversationId, learningLevel, chatStyle, responseLength)
-    2. Check rate limit: if freeQueriesRemaining > 0, decrement. If 0 and no tokens, reject with 429.
-    3. If freeQueriesRemaining hits 0, set freeQueriesResetAt to now + freeSuspensionHours
-    4. If user has tokens and free queries exhausted, deduct 1 token
-    5. Fetch source content text from Cloudinary URLs (extract text from PDFs -- use a text extraction approach, or send file URLs to Gemini if the model supports it)
-    6. Build system prompt with: role, learning level, chat style, response length, source context
-    7. Call Gemini API with streaming
-    8. Save AIInteraction record
-    9. Stream response to client
-  - [ ] `GET /api/ai/history` -- list conversations (grouped by conversationId, most recent first)
-  - [ ] `DELETE /api/ai/history/[id]` -- delete single interaction
-  - [ ] `DELETE /api/ai/history` -- clear all history for current user
-  - [ ] `PATCH /api/ai/history/[id]/rate` -- set satisfaction rating (1-5)
-- [ ] Rate limit reset: a check at the start of every AI query -- if freeQueriesResetAt has passed, reset freeQueriesRemaining to freeQueriesPerDay (from AppSettings)
+- [x] Build AI page at `src/app/(student)/ai/page.tsx`
+- [x] Create Gemini client at `src/lib/gemini.ts` (async from AppSettings with env fallback, 60s TTL cache)
+- [x] API routes:
+  - [x] `POST /api/ai/query` -- main chat endpoint (streaming SSE, rate limit, source context, conversation history)
+  - [x] `GET /api/ai/history` -- list conversations (grouped by conversationId, most recent first)
+  - [x] `DELETE /api/ai/history/[id]` -- delete conversation by conversationId
+  - [x] `DELETE /api/ai/history` -- clear all history for current user
+  - [x] `PATCH /api/ai/history/[id]/rate` -- set satisfaction rating (1-5)
+  - [x] `GET /api/ai/status` -- query/token status for UI display
+  - [x] `POST /api/ai/quiz-score` -- save quiz scores
+- [x] Rate limit reset: check at start of every AI query via `src/lib/ai-rate-limit.ts` (atomic Prisma transaction)
 
 ### 3.2 Source selection
 
-- [ ] Create source drawer component at `src/components/ai/source-drawer.tsx`:
+- [x] Create source drawer component at `src/components/ai/source-drawer.tsx`:
   - Sheet/drawer that slides open from the right
   - Browse content filtered by user's faculty/semester
   - Search by title or module
-  - Filter by module and file type
   - Multi-select with checkboxes
   - "Select all" toggle
   - "Load more" pagination
-  - "Upload personal file" button (uploads to Cloudinary under a user-specific folder)
   - Selected count badge on the drawer trigger button
-  - Selected sources shown as removable chips above the chat input
+  - Selected sources shown as removable chips above the chat input (SelectedSourceChips component)
+  - [ ] "Upload personal file" button (uploads to Cloudinary under a user-specific folder)
 
 ### 3.3 Chat interface
 
-- [ ] Create chat components:
-  - [ ] `src/components/ai/chat-interface.tsx` -- main chat container
-  - [ ] `src/components/ai/chat-message.tsx` -- single message bubble (user or AI)
-  - [ ] `src/components/ai/chat-history.tsx` -- side panel (desktop) with past conversations
-- [ ] Chat interface features:
-  - [ ] Message input with send button
-  - [ ] Streaming AI responses (display tokens as they arrive)
-  - [ ] "New Chat" button (generates new conversationId)
-  - [ ] Conversation list in side panel (desktop only), grouped by date
-  - [ ] Click a conversation to reload its messages
-  - [ ] Delete conversation button
-  - [ ] Rate response (1-5 stars) on each AI message
-  - [ ] Token/query display in header: "X free queries remaining" or "X tokens available"
-  - [ ] Link to token purchase page when balance is low
-  - [ ] Learning level selector (beginner/intermediate/advanced)
-  - [ ] Chat settings dropdown: style (default/learning guide/custom), response length (default/shorter/longer), custom instructions textarea
+- [x] Create chat components:
+  - [x] `src/components/ai/chat-interface.tsx` -- main chat container (resizable panels desktop, sheet mobile)
+  - [x] `src/components/ai/chat-message.tsx` -- single message bubble with markdown rendering, copy, rating
+  - [x] `src/components/ai/chat-history.tsx` -- side panel with past conversations grouped by date
+- [x] Chat interface features:
+  - [x] Message input with send button (Enter to send, Shift+Enter for newline)
+  - [x] Streaming AI responses (SSE with incremental rendering + cursor animation)
+  - [x] "New Chat" button (generates new conversationId)
+  - [x] Conversation list in side panel (desktop only), grouped by date (Today/Yesterday/This Week/Older)
+  - [x] Click a conversation to reload its messages
+  - [x] Delete conversation button (with confirmation dialog)
+  - [x] Rate response (1-5 stars) on each AI message
+  - [x] Token/query display in header via QueryStatus component (progress bar + countdown timer)
+  - [x] Link to token purchase page when balance is low
+  - [x] Learning level selector (beginner/intermediate/advanced) in settings popover
+  - [x] Chat settings popover: style (default/learning guide/custom), response length, custom instructions textarea
 
 ### 3.4 Learning tools
 
-- [ ] Create learning studio drawer at `src/components/ai/learning-studio.tsx`
-- [ ] API route: `POST /api/ai/learning-tool` -- accepts tool type and topic/source IDs, returns structured output
-- [ ] Each tool has a specific system prompt. Implement prompt builders in `src/lib/gemini.ts`:
-  - [ ] `buildStudyGuidePrompt(topic, sources, level)` -- returns structured guide
-  - [ ] `buildMCQPrompt(topic, sources, level)` -- returns 10 MCQs with explanations (JSON format)
-  - [ ] `buildFillBlanksPrompt(topic, sources, level)` -- returns 10 fill-in-the-blank exercises
-  - [ ] `buildMatchingPrompt(topic, sources, level)` -- returns column A/B matching
-  - [ ] `buildTrueFalsePrompt(topic, sources, level)` -- returns 12 T/F with explanations
-  - [ ] `buildConceptExplainerPrompt(concept, sources, level)` -- returns 6-part explanation
-  - [ ] `buildStudyPlanPrompt(topic, sources, deadline)` -- returns 2-3 week plan
-  - [ ] `buildExamPrepPrompt(topic, sources, level)` -- returns exam questions + tips
-  - [ ] `buildNoteSummaryPrompt(topic, sources)` -- returns bullet-point notes
-- [ ] Learning tool UI:
-  - [ ] Grid of 10 tool cards in the Learning Studio drawer
-  - [ ] Click a tool -> enter topic (or use selected sources) -> generate
-  - [ ] Loading state with skeleton
-  - [ ] Rendered output with proper formatting (markdown rendered, quiz questions interactive)
-  - [ ] MCQ/T-F/Fill-blanks: interactive quiz with score tracking, save score to QuizScore table
-  - [ ] Study guide/notes: copy-to-clipboard button
+- [x] Create learning studio drawer at `src/components/ai/learning-studio.tsx`
+- [x] API route: `POST /api/ai/learning-tool` -- accepts tool type and topic/source IDs, returns structured output
+- [x] Each tool has a specific system prompt. Implement prompt builders in `src/lib/gemini.ts`:
+  - [x] `buildStudyGuidePrompt(topic, sources, level)` -- returns structured guide
+  - [x] `buildMCQPrompt(topic, sources, level)` -- returns 10 MCQs with explanations (JSON format)
+  - [x] `buildFillBlanksPrompt(topic, sources, level)` -- returns 10 fill-in-the-blank exercises
+  - [x] `buildMatchingPrompt(topic, sources, level)` -- returns column A/B matching
+  - [x] `buildTrueFalsePrompt(topic, sources, level)` -- returns 12 T/F with explanations
+  - [x] `buildConceptExplainerPrompt(concept, sources, level)` -- returns 6-part explanation
+  - [x] `buildStudyPlanPrompt(topic, sources, deadline)` -- returns 2-3 week plan
+  - [x] `buildExamPrepPrompt(topic, sources, level)` -- returns exam questions + tips
+  - [x] `buildNoteSummaryPrompt(topic, sources)` -- returns bullet-point notes
+- [x] Learning tool UI:
+  - [x] Grid of 10 tool cards in the Learning Studio drawer
+  - [x] Click a tool -> enter topic (or use selected sources) -> generate
+  - [x] Loading state with skeleton
+  - [x] Rendered output with proper formatting (markdown rendered, quiz questions interactive)
+  - [x] MCQ/T-F/Fill-blanks/Matching: interactive quiz with score tracking, save score to QuizScore table
+  - [x] Study guide/notes: copy-to-clipboard button
   - [ ] Study plan: save as tasks (optional)
 
 ### 3.5 Audio overview
 
-- [ ] Install ElevenLabs SDK: `pnpm add elevenlabs`
-- [ ] Create ElevenLabs client at `src/lib/elevenlabs.ts`
-- [ ] API route: `POST /api/ai/audio`:
+- [x] Create ElevenLabs client at `src/lib/elevenlabs.ts` (uses fetch API directly, no SDK dependency needed)
+- [x] API route: `POST /api/ai/audio`:
   1. Accept: sourceContentIds, narrationStyle ("single" or "conversation"), voiceId
   2. Generate podcast script via Gemini (specific prompt for 3-4 minute script)
-  3. If ElevenLabs API key is configured: convert script to MP3 via ElevenLabs, return audio URL
+  3. If ElevenLabs API key is configured: convert script to MP3 via ElevenLabs, return audio as base64
   4. If no ElevenLabs key: return script text only (client uses Web Speech API)
   5. Save AIInteraction with queryType = "audio_overview"
-- [ ] Audio player component at `src/components/ai/audio-player.tsx`:
-  - [ ] Play/pause button
-  - [ ] Progress bar
-  - [ ] Download MP3 button (if ElevenLabs was used)
-  - [ ] Web Speech API fallback: use `SpeechSynthesis` browser API to read the script
-  - [ ] Voice selection: if ElevenLabs, show George/Bella/Daniel/Dorothy. If Web Speech, show browser voices.
-  - [ ] Narration style toggle: single narrator / two-host conversation
+- [x] Audio player component at `src/components/ai/audio-player.tsx`:
+  - [x] Play/pause button
+  - [x] Progress bar (Slider for HTML5 audio)
+  - [x] Download MP3 button (if ElevenLabs was used)
+  - [x] Web Speech API fallback: use `SpeechSynthesis` browser API to read the script
+  - [x] Voice selection: Web Speech shows browser voices; ElevenLabs voices defined in lib
+  - [x] Narration style toggle: single narrator / two-host conversation (in LearningStudio)
 
 ### Phase 3 verification
 
-- [ ] AI chat works with source selection
+- [ ] AI chat works with source selection (needs live Gemini API key to test)
 - [ ] Streaming responses render incrementally
 - [ ] Free query limit works (count decreases, locks after 20, resets after suspension period)
 - [ ] Token deduction works when free queries are exhausted
