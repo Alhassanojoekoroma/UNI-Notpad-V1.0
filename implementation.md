@@ -1217,19 +1217,19 @@ Build the student-facing features. This is the largest phase.
 
 ### 2.1 Landing page and public pages
 
-- [ ] Build landing page at `src/app/(public)/page.tsx`:
+- [x] Build landing page at `src/app/(public)/page.tsx`:
   - University name and logo (from AppSettings, fetched server-side)
   - Hero section explaining the platform
   - Feature highlights (course materials, AI assistant, progress tracking)
   - Call-to-action: Register / Login buttons
   - Footer with links to terms of service, privacy policy, code of conduct
-- [ ] Build login page at `src/app/(public)/login/page.tsx`:
+- [x] Build login page at `src/app/(public)/login/page.tsx`:
   - Email/password form
   - Google sign-in button
   - Facebook sign-in button
   - "Forgot password" link
   - "Don't have an account? Register" link
-- [ ] Build register page at `src/app/(public)/register/page.tsx`:
+- [x] Build register page at `src/app/(public)/register/page.tsx`:
   - Step 1: Choose auth method (email/password, Google, Facebook)
   - Step 2: Role selection (Student, Lecturer, Admin)
   - Step 3: Role-specific fields
@@ -1238,18 +1238,18 @@ Build the student-facing features. This is the largest phase.
     - Admin: Access code input (validated against hardcoded admin setup code, only during first setup)
   - Step 4: Accept Terms of Service AND Privacy Policy (separate checkboxes)
   - Redirect to role-specific subdomain on completion
-- [ ] Build email verification page at `src/app/(public)/verify/page.tsx`
-- [ ] Build forgot password page and reset flow
+- [x] Build email verification page at `src/app/(public)/verify/page.tsx`
+- [x] Build forgot password page and reset flow
 
 ### 2.2 Student layout
 
-- [ ] Create student sidebar at `src/components/layouts/student-sidebar.tsx`:
+- [x] Create student sidebar at `src/components/layouts/student-sidebar.tsx`:
   - Navigation items: Dashboard, Course Materials, AI Assistant, Tasks, Schedule, Messages, Forum, Progress, Tokens, Referrals, Settings
   - Collapsible on mobile (sheet drawer)
   - Active page highlight
   - User avatar and name at bottom
   - Notification bell with unread count in header
-- [ ] Create student layout at `src/app/(student)/layout.tsx`:
+- [x] Create student layout at `src/app/(student)/layout.tsx`:
   - Auth guard: redirect to /login if no session, redirect to /register if session but no role setup
   - Sidebar + main content area
   - Global search in header
@@ -1257,7 +1257,7 @@ Build the student-facing features. This is the largest phase.
 
 ### 2.3 Student dashboard
 
-- [ ] Build dashboard at `src/app/(student)/dashboard/page.tsx`:
+- [x] Build dashboard at `src/app/(student)/dashboard/page.tsx`:
   - Time-based greeting ("Good morning, Ibrahim")
   - Academic info display (Faculty, Semester, Program)
   - Stats cards: unread messages count, upcoming deadlines count, AI queries remaining, recent quiz average
@@ -1265,121 +1265,121 @@ Build the student-facing features. This is the largest phase.
 
 ### 2.4 Task manager
 
-- [ ] Build tasks page at `src/app/(student)/tasks/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/tasks` -- list tasks for current user, optional filters (status, priority)
-  - [ ] `POST /api/tasks` -- create task with Zod validation
-  - [ ] `PATCH /api/tasks/[id]` -- update task (title, description, deadline, priority, status)
-  - [ ] `DELETE /api/tasks/[id]` -- delete task (verify ownership)
-  - [ ] `POST /api/tasks/[id]/invite` -- create TaskInvitation, send email notification
-- [ ] Task UI:
-  - [ ] Task list with status/priority filters
-  - [ ] Add task dialog: title, description, deadline (date picker), priority (select), tags (multi-input)
-  - [ ] Inline edit and delete
-  - [ ] Countdown timers on tasks due within 24 hours
-  - [ ] Collaboration: "Invite" button opens email input, sends invitation
+- [x] Build tasks page at `src/app/(student)/tasks/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/tasks` -- list tasks for current user, optional filters (status, priority)
+  - [x] `POST /api/tasks` -- create task with Zod validation
+  - [x] `PATCH /api/tasks/[id]` -- update task (title, description, deadline, priority, status)
+  - [x] `DELETE /api/tasks/[id]` -- delete task (verify ownership)
+  - [x] `POST /api/tasks/[id]/invite` -- create TaskInvitation, send email notification
+- [x] Task UI:
+  - [x] Task list with status/priority filters
+  - [x] Add task dialog: title, description, deadline (date picker), priority (select), tags (multi-input)
+  - [x] Inline edit and delete
+  - [x] Countdown timers on tasks due within 24 hours
+  - [x] Collaboration: "Invite" button opens email input, sends invitation
   - [ ] Toast notification when a task deadline is approaching (check on page load)
 
 ### 2.5 Schedule manager
 
-- [ ] Build schedule page at `src/app/(student)/schedule/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/schedule` -- list schedule entries for current user
-  - [ ] `POST /api/schedule` -- create entry
-  - [ ] `PATCH /api/schedule/[id]` -- update entry
-  - [ ] `DELETE /api/schedule/[id]` -- delete entry
-- [ ] Schedule UI:
-  - [ ] Weekly grid view (7 columns, time rows)
-  - [ ] Add entry dialog: day (select), start time, end time, subject, location, type
-  - [ ] Color-coded by type (lecture, tutorial, lab)
+- [x] Build schedule page at `src/app/(student)/schedule/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/schedule` -- list schedule entries for current user
+  - [x] `POST /api/schedule` -- create entry
+  - [x] `PATCH /api/schedule/[id]` -- update entry
+  - [x] `DELETE /api/schedule/[id]` -- delete entry
+- [x] Schedule UI:
+  - [x] Weekly grid view (7 columns, time rows)
+  - [x] Add entry dialog: day (select), start time, end time, subject, location, type
+  - [x] Color-coded by type (lecture, tutorial, lab)
   - [ ] Mini calendar showing current month with today highlighted
   - [ ] Timetable content uploaded by lecturers also displayed here (read from Content where type = TIMETABLE and matching faculty/semester)
 
 ### 2.6 Course materials
 
-- [ ] Build content browse page at `src/app/(student)/content/page.tsx`
-- [ ] Build content detail page at `src/app/(student)/content/[id]/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/content` -- list content filtered by user's faculty + semester (enforced server-side). Query params: search, module, lecturerId, contentType, sort (newest/views/downloads), page
-  - [ ] `GET /api/content/[id]` -- single item (verify faculty/semester match)
-  - [ ] `POST /api/content/[id]/access` -- log view or download, increment counters
-  - [ ] `POST /api/content/[id]/rate` -- create/update rating (1-5, optional feedback)
-  - [ ] `POST /api/content/[id]/flag` -- flag content with reason
-- [ ] Content browse UI:
-  - [ ] Search bar (title, module name)
-  - [ ] Filter dropdowns: module, lecturer, content type
-  - [ ] Sort dropdown: newest, most viewed, most downloaded
-  - [ ] Content cards: title, module, lecturer name, file type badge (color-coded), semester, view count, download count, average rating
-  - [ ] Pagination: "Load more" button, 30 items per page
-- [ ] Content detail/viewer:
-  - [ ] PDF: embed pdf.js viewer with annotation support. Install: `pnpm add pdfjs-dist`
-  - [ ] PPTX: Google Slides viewer iframe (URL: `https://docs.google.com/gview?url=ENCODED_URL&embedded=true`)
-  - [ ] DOCX: download button (no inline preview)
-  - [ ] Images: native img tag with zoom
-  - [ ] Download button for all types
-  - [ ] Rating widget (1-5 stars + optional text feedback)
-  - [ ] Flag button ("Report this content")
-  - [ ] Tutorial link button (if present)
+- [x] Build content browse page at `src/app/(student)/content/page.tsx`
+- [x] Build content detail page at `src/app/(student)/content/[id]/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/content` -- list content filtered by user's faculty + semester (enforced server-side). Query params: search, module, lecturerId, contentType, sort (newest/views/downloads), page
+  - [x] `GET /api/content/[id]` -- single item (verify faculty/semester match)
+  - [x] `POST /api/content/[id]/access` -- log view or download, increment counters
+  - [x] `POST /api/content/[id]/rate` -- create/update rating (1-5, optional feedback)
+  - [x] `POST /api/content/[id]/flag` -- flag content with reason
+- [x] Content browse UI:
+  - [x] Search bar (title, module name)
+  - [x] Filter dropdowns: module, lecturer, content type
+  - [x] Sort dropdown: newest, most viewed, most downloaded
+  - [x] Content cards: title, module, lecturer name, file type badge (color-coded), semester, view count, download count, average rating
+  - [x] Pagination: "Load more" button, 30 items per page
+- [x] Content detail/viewer:
+  - [x] PDF: embed pdf.js viewer with annotation support. Install: `pnpm add pdfjs-dist`
+  - [x] PPTX: Google Slides viewer iframe (URL: `https://docs.google.com/gview?url=ENCODED_URL&embedded=true`)
+  - [x] DOCX: download button (no inline preview)
+  - [x] Images: native img tag with zoom
+  - [x] Download button for all types
+  - [x] Rating widget (1-5 stars + optional text feedback)
+  - [x] Flag button ("Report this content")
+  - [x] Tutorial link button (if present)
 
 ### 2.7 Messaging
 
-- [ ] Build messages page at `src/app/(student)/messages/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/messages` -- inbox (received messages, paginated, with sender info)
-  - [ ] `GET /api/messages/sent` -- sent messages
-  - [ ] `POST /api/messages` -- send message (check: recipient not blocked, sender not blocked by recipient)
-  - [ ] `PATCH /api/messages/[id]/read` -- mark as read (verify recipient is current user)
-  - [ ] `POST /api/messages/[id]/report` -- report message
-  - [ ] `POST /api/users/[id]/block` -- block user
-  - [ ] `DELETE /api/users/[id]/block` -- unblock user
-- [ ] Messages UI:
-  - [ ] Tab view: Inbox / Sent
-  - [ ] Compose dialog: recipient autocomplete (search users by name), subject, body
-  - [ ] Unread indicators (bold text, blue dot)
-  - [ ] Reply button on received messages
-  - [ ] Block user option in message actions
-  - [ ] Report message option in message actions
+- [x] Build messages page at `src/app/(student)/messages/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/messages` -- inbox (received messages, paginated, with sender info)
+  - [x] `GET /api/messages/sent` -- sent messages
+  - [x] `POST /api/messages` -- send message (check: recipient not blocked, sender not blocked by recipient)
+  - [x] `PATCH /api/messages/[id]/read` -- mark as read (verify recipient is current user)
+  - [x] `POST /api/messages/[id]/report` -- report message
+  - [x] `POST /api/users/[id]/block` -- block user
+  - [x] `DELETE /api/users/[id]/block` -- unblock user
+- [x] Messages UI:
+  - [x] Tab view: Inbox / Sent
+  - [x] Compose dialog: recipient autocomplete (search users by name), subject, body
+  - [x] Unread indicators (bold text, blue dot)
+  - [x] Reply button on received messages
+  - [x] Block user option in message actions
+  - [x] Report message option in message actions
   - [ ] Email notification sent via Resend when a message is received (if user has notifications enabled)
 
 ### 2.8 Notifications
 
-- [ ] Create notification bell component at `src/components/shared/notification-bell.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/notifications` -- list notifications for current user, paginated, newest first
-  - [ ] `PATCH /api/notifications/[id]/read` -- mark as read
-  - [ ] `PATCH /api/notifications/read-all` -- mark all as read
-- [ ] Notification creation: create a utility function `createNotification(userId, type, title, body, referenceType?, referenceId?)` used across all API routes that trigger notifications
-- [ ] Notification dropdown:
-  - [ ] Bell icon with unread count badge
-  - [ ] Dropdown shows recent notifications
-  - [ ] Click notification marks it as read and navigates to the relevant page
-  - [ ] "Mark all as read" link
+- [x] Create notification bell component at `src/components/shared/notification-bell.tsx`
+- [x] API routes:
+  - [x] `GET /api/notifications` -- list notifications for current user, paginated, newest first
+  - [x] `PATCH /api/notifications/[id]/read` -- mark as read
+  - [x] `PATCH /api/notifications/read-all` -- mark all as read
+- [x] Notification creation: create a utility function `createNotification(userId, type, title, body, referenceType?, referenceId?)` used across all API routes that trigger notifications
+- [x] Notification dropdown:
+  - [x] Bell icon with unread count badge
+  - [x] Dropdown shows recent notifications
+  - [x] Click notification marks it as read and navigates to the relevant page
+  - [x] "Mark all as read" link
 
 ### 2.9 Global search
 
-- [ ] Create search component at `src/components/shared/global-search.tsx`
-- [ ] API route: `GET /api/search?q=QUERY` -- searches across:
+- [x] Create search component at `src/components/shared/global-search.tsx`
+- [x] API route: `GET /api/search?q=QUERY` -- searches across:
   - Content (title, module) -- filtered by faculty/semester
   - Tasks (title)
   - Schedule (subject)
   - Messages (subject, body)
   - Forum posts (title, body) -- filtered by faculty
-- [ ] Use shadcn Command component (Cmd+K / Ctrl+K to open)
-- [ ] Results grouped by category with icons
-- [ ] Click result navigates to the relevant page
+- [x] Use shadcn Command component (Cmd+K / Ctrl+K to open)
+- [x] Results grouped by category with icons
+- [x] Click result navigates to the relevant page
 
 ### Phase 2 verification
 
-- [ ] Landing page renders with university branding from AppSettings
-- [ ] Registration flow works for all three roles
-- [ ] Student can only see content from their faculty + semester
-- [ ] Task CRUD works, invitations send emails
-- [ ] Schedule entries display in weekly grid
-- [ ] Content browse filters and sorts work
-- [ ] PDF viewer opens with annotations
-- [ ] Messaging works, blocking prevents messages, reporting creates entries
-- [ ] Notifications appear when relevant events happen
-- [ ] Global search returns results from all categories
+- [x] Landing page renders with university branding from AppSettings
+- [x] Registration flow works for all three roles
+- [x] Student can only see content from their faculty + semester
+- [x] Task CRUD works, invitations send emails
+- [x] Schedule entries display in weekly grid
+- [x] Content browse filters and sorts work
+- [x] PDF viewer opens with annotations
+- [x] Messaging works, blocking prevents messages, reporting creates entries
+- [x] Notifications appear when relevant events happen
+- [x] Global search returns results from all categories
 
 ---
 
