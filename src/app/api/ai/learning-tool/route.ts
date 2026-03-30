@@ -16,7 +16,7 @@ import {
   buildExamPrepPrompt,
   buildNoteSummaryPrompt,
 } from "@/lib/gemini";
-import crypto from "crypto";
+import { randomUUID } from "crypto";
 
 const promptBuilders: Record<
   string,
@@ -55,23 +55,19 @@ export async function POST(request: Request) {
 
     const { toolType, sourceContentIds, topic, learningLevel } = parsed.data;
 
-    // Rate limit check
-    const rateLimit = await checkAndDeductAIQuery(session.user.id);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: rateLimit.reason,
-          resetAt: rateLimit.resetAt,
-        },
-        { status: 429 }
-      );
-    }
-
-    // Audio overview is handled by a separate endpoint
+    // Audio overview is handled by a separate endpoint — check before rate limit
     if (toolType === "audio_overview") {
       return NextResponse.json(
         { success: false, error: "Use /api/ai/audio for audio overview" },
+        { status: 400 }
+      );
+    }
+
+    // Build prompt — validate before deducting rate limit
+    const buildPrompt = promptBuilders[toolType];
+    if (!buildPrompt) {
+      return NextResponse.json(
+        { success: false, error: "Unknown tool type" },
         { status: 400 }
       );
     }
@@ -84,12 +80,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build prompt
-    const buildPrompt = promptBuilders[toolType];
-    if (!buildPrompt) {
+    // Rate limit check — deduct only after all validation passes
+    const rateLimit = await checkAndDeductAIQuery(session.user.id);
+    if (!rateLimit.allowed) {
       return NextResponse.json(
-        { success: false, error: "Unknown tool type" },
-        { status: 400 }
+        {
+          success: false,
+          error: rateLimit.reason,
+          resetAt: rateLimit.resetAt,
+        },
+        { status: 429 }
       );
     }
 
@@ -116,20 +116,21 @@ export async function POST(request: Request) {
     });
 
     const responseText = result.response.text();
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount ?? 1;
     const responseTimeMs = Date.now() - startTime;
 
     // Save interaction
     const interaction = await prisma.aIInteraction.create({
       data: {
         userId: session.user.id,
-        conversationId: crypto.randomUUID(),
+        conversationId: randomUUID(),
         query: `[${toolType}] ${topic || "From source materials"}`,
         response: responseText,
         sourceContentIds,
         queryType: toolType,
         learningLevel: learningLevel || null,
         responseTimeMs,
-        tokensUsed: 1,
+        tokensUsed,
       },
     });
 

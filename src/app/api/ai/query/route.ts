@@ -7,7 +7,7 @@ import {
   fetchSourceContent,
   buildSystemPrompt,
 } from "@/lib/gemini";
-import crypto from "crypto";
+import { randomUUID } from "crypto";
 
 export async function POST(request: Request) {
   try {
@@ -70,9 +70,9 @@ export async function POST(request: Request) {
     });
 
     // Get conversation history for context
-    const conversationId = existingConversationId || crypto.randomUUID();
-    let history: { role: string; parts: { text: string }[] }[] = [];
+    const conversationId = existingConversationId || randomUUID();
 
+    let history: { role: string; parts: { text: string }[] }[] = [];
     if (existingConversationId) {
       const previousMessages = await prisma.aIInteraction.findMany({
         where: {
@@ -105,6 +105,7 @@ export async function POST(request: Request) {
     // Create SSE stream
     const encoder = new TextEncoder();
     let fullResponse = "";
+    const userId = session.user.id;
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -121,11 +122,17 @@ export async function POST(request: Request) {
             }
           }
 
-          // Save interaction to DB
+          // Get actual token usage from Gemini response
+          const finalResponse = await result.response;
+          const tokensUsed =
+            finalResponse.usageMetadata?.totalTokenCount ?? 1;
+
+          // Save interaction to DB — fire-and-forget with error logging
+          // so the stream closes promptly for the client
           const responseTimeMs = Date.now() - startTime;
-          const interaction = await prisma.aIInteraction.create({
+          const dbSave = prisma.aIInteraction.create({
             data: {
-              userId: session.user.id,
+              userId,
               conversationId,
               query,
               response: fullResponse,
@@ -133,9 +140,12 @@ export async function POST(request: Request) {
               queryType: "chat",
               learningLevel: learningLevel || null,
               responseTimeMs,
-              tokensUsed: 1,
+              tokensUsed,
             },
           });
+
+          // Await the save — we want the interaction ID for the done event
+          const interaction = await dbSave;
 
           controller.enqueue(
             encoder.encode(
@@ -148,13 +158,18 @@ export async function POST(request: Request) {
           );
           controller.close();
         } catch (error) {
+          console.error("AI stream error:", error);
           const message =
             error instanceof Error ? error.message : "Stream failed";
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: "error", message })}\n\n`
-            )
-          );
+          try {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: "error", message })}\n\n`
+              )
+            );
+          } catch {
+            // Controller may already be closed if client disconnected
+          }
           controller.close();
         }
       },

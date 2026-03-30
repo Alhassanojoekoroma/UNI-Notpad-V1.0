@@ -12,7 +12,7 @@ import {
   generateAudio,
   isElevenLabsConfigured,
 } from "@/lib/elevenlabs";
-import crypto from "crypto";
+import { randomUUID } from "crypto";
 
 export async function POST(request: Request) {
   try {
@@ -36,7 +36,16 @@ export async function POST(request: Request) {
 
     const { sourceContentIds, narrationStyle, voiceId } = parsed.data;
 
-    // Rate limit check
+    // Validate sources before deducting rate limit
+    const sources = await fetchSourceContent(sourceContentIds);
+    if (!sources.length) {
+      return NextResponse.json(
+        { success: false, error: "No valid source content found" },
+        { status: 400 }
+      );
+    }
+
+    // Rate limit check — deduct only after validation
     const rateLimit = await checkAndDeductAIQuery(session.user.id);
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -46,14 +55,6 @@ export async function POST(request: Request) {
           resetAt: rateLimit.resetAt,
         },
         { status: 429 }
-      );
-    }
-
-    const sources = await fetchSourceContent(sourceContentIds);
-    if (!sources.length) {
-      return NextResponse.json(
-        { success: false, error: "No valid source content found" },
-        { status: 400 }
       );
     }
 
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     });
 
     const script = result.response.text();
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount ?? 1;
     const responseTimeMs = Date.now() - startTime;
 
     // Try ElevenLabs TTS if configured
@@ -97,13 +99,13 @@ export async function POST(request: Request) {
     const interaction = await prisma.aIInteraction.create({
       data: {
         userId: session.user.id,
-        conversationId: crypto.randomUUID(),
+        conversationId: randomUUID(),
         query: `[audio_overview] ${narrationStyle} narration`,
         response: script,
         sourceContentIds,
         queryType: "audio_overview",
         responseTimeMs,
-        tokensUsed: 1,
+        tokensUsed,
       },
     });
 
