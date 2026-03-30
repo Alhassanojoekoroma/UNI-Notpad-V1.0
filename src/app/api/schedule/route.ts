@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createTaskSchema } from "@/lib/validators/task";
+import { createScheduleSchema } from "@/lib/validators/schedule";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -13,23 +13,14 @@ export async function GET(request: Request) {
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-    const priority = searchParams.get("priority");
-
-    const where: Record<string, unknown> = { userId: session.user.id };
-    if (status) where.status = status;
-    if (priority) where.priority = priority;
-
-    const tasks = await prisma.task.findMany({
-      where,
-      include: { invitations: true },
-      orderBy: [{ deadline: "asc" }, { createdAt: "desc" }],
+    const entries = await prisma.schedule.findMany({
+      where: { userId: session.user.id },
+      orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     });
 
-    return NextResponse.json({ success: true, data: tasks });
+    return NextResponse.json({ success: true, data: entries });
   } catch (error) {
-    console.error("Tasks fetch error:", error);
+    console.error("Schedule fetch error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
@@ -48,7 +39,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const parsed = createTaskSchema.safeParse(body);
+    const parsed = createScheduleSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -57,17 +48,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const task = await prisma.task.create({
+    const entry = await prisma.schedule.create({
       data: {
         ...parsed.data,
         userId: session.user.id,
       },
-      include: { invitations: true },
     });
 
-    return NextResponse.json({ success: true, data: task }, { status: 201 });
+    return NextResponse.json({ success: true, data: entry }, { status: 201 });
   } catch (error) {
-    console.error("Task creation error:", error);
+    console.error("Schedule creation error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
