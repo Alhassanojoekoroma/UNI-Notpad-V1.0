@@ -20,7 +20,11 @@ export const contentUploadSchema = z.object({
   tutorialLink: z.string().url().optional(),
 });
 
-export const contentUpdateSchema = contentUploadSchema.partial();
+export const contentUpdateSchema = contentUploadSchema
+  .extend({
+    status: z.enum(["ACTIVE", "DRAFT", "ARCHIVED"]).optional(),
+  })
+  .partial();
 
 export const contentRatingSchema = z.object({
   rating: z.number().int().min(1).max(5),

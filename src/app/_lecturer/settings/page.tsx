@@ -133,6 +133,22 @@ export default function LecturerSettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Notifications</CardTitle>
+          <CardDescription>
+            Choose what notifications you receive
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Notification preferences are coming soon. You currently receive
+            notifications for new messages and content flags.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Account */}
       <Card>
         <CardHeader>
