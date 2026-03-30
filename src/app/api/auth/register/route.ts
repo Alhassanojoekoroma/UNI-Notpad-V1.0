@@ -18,6 +18,8 @@ export async function POST(request: Request) {
     }
 
     const { name, email, password, role, studentId, referralCode } = parsed.data;
+    const { accessCode, facultyId, semester, programId, termsAccepted, privacyAccepted } =
+      body as Record<string, unknown>;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -41,6 +43,45 @@ export async function POST(request: Request) {
       }
     }
 
+    // Validate lecturer access code
+    if (role === "LECTURER") {
+      if (!accessCode || typeof accessCode !== "string") {
+        return NextResponse.json(
+          { success: false, error: "Access code is required for lecturers" },
+          { status: 400 }
+        );
+      }
+      const lecturerCodes = await prisma.lecturerCode.findMany({
+        where: { isActive: true, revokedAt: null },
+      });
+      const validCode = await Promise.any(
+        lecturerCodes.map(async (lc) => {
+          const match = await bcrypt.compare(accessCode, lc.code);
+          return match ? lc : Promise.reject();
+        })
+      ).catch(() => null);
+
+      if (!validCode) {
+        return NextResponse.json(
+          { success: false, error: "Invalid access code" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Validate faculty/program exist for students
+    if (role === "STUDENT" && facultyId) {
+      const faculty = await prisma.faculty.findUnique({
+        where: { id: facultyId as string },
+      });
+      if (!faculty) {
+        return NextResponse.json(
+          { success: false, error: "Invalid faculty" },
+          { status: 400 }
+        );
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const userReferralCode = generateReferralCode();
 
@@ -51,7 +92,12 @@ export async function POST(request: Request) {
         password: hashedPassword,
         role,
         studentId: studentId || null,
+        facultyId: (role === "STUDENT" && facultyId ? facultyId : null) as string | null,
+        semester: role === "STUDENT" && semester ? Number(semester) : null,
+        programId: (role === "STUDENT" && programId ? programId : null) as string | null,
         referralCode: userReferralCode,
+        termsAccepted: termsAccepted === true,
+        privacyAccepted: privacyAccepted === true,
         tokenBalance: {
           create: {},
         },
