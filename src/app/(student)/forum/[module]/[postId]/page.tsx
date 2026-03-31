@@ -2,9 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { PostList } from "@/components/forum/post-list";
-import { CreatePostDialog } from "@/components/forum/create-post-dialog";
-import { useSession } from "@/hooks/use-session";
+import { PostDetail } from "@/components/forum/post-detail";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,14 +12,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-export default function ModuleForumPage({
+export default function PostDetailPage({
   params,
 }: {
-  params: Promise<{ module: string }>;
+  params: Promise<{ module: string; postId: string }>;
 }) {
-  const { module } = use(params);
+  const { module, postId } = use(params);
   const decodedModule = decodeURIComponent(module);
-  const { user } = useSession();
 
   return (
     <div className="p-6 space-y-6">
@@ -34,19 +31,22 @@ export default function ModuleForumPage({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{decodedModule}</BreadcrumbPage>
+            <BreadcrumbLink
+              render={
+                <Link href={`/forum/${encodeURIComponent(decodedModule)}`} />
+              }
+            >
+              {decodedModule}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Post</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{decodedModule}</h1>
-        {user?.facultyId && (
-          <CreatePostDialog module={decodedModule} facultyId={user.facultyId} />
-        )}
-      </div>
-
-      <PostList module={decodedModule} />
+      <PostDetail postId={postId} />
     </div>
   );
 }
