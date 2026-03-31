@@ -1581,10 +1581,10 @@ The most complex feature. Build it after Phase 2 so you have content in the data
 
 This runs on first deployment, before any other admin features.
 
-- [ ] Build setup page at `src/app/(public)/setup/page.tsx`
-- [ ] The setup page is only accessible when `AppSettings.isSetupComplete === false`
-- [ ] Redirect away if already set up
-- [ ] Setup wizard steps:
+- [x] Build setup page at `src/app/(public)/setup/page.tsx`
+- [x] The setup page is only accessible when `AppSettings.isSetupComplete === false`
+- [x] Redirect away if already set up
+- [x] Setup wizard steps:
   1. **University info**: name, logo upload (Cloudinary), primary/secondary colors
   2. **Admin account**: create the first admin user (email, password, name)
   3. **Academic structure**: add faculties (name, code), add programs per faculty (name, code)
@@ -1592,14 +1592,14 @@ This runs on first deployment, before any other admin features.
   5. **API keys**: Gemini API key (required), Resend API key (required), Cloudinary credentials (required), ElevenLabs (optional), Monime/Stripe (optional)
   6. **Policies**: paste or write Terms of Service, Privacy Policy, Code of Conduct (provide default templates)
   7. **Review and finish**: summary of all settings, "Complete Setup" button
-- [ ] On completion: set `isSetupComplete = true`, redirect to `admin.localhost:3000/dashboard`
-- [ ] API route: `POST /api/setup` -- validates and saves all wizard data in one transaction
+- [x] On completion: set `isSetupComplete = true`, redirect to `admin.localhost:3000/dashboard`
+- [x] API route: `POST /api/setup` -- validates and saves all wizard data in one transaction
 
 ### 5.2 Admin layout and dashboard
 
-- [ ] Create admin sidebar: Dashboard, Users, Analytics, Settings, Flags, Reports, Lecturer Codes, Bulk Messages
-- [ ] Create admin layout at `src/app/_admin/layout.tsx` with role guard (ADMIN only)
-- [ ] Build dashboard at `src/app/_admin/dashboard/page.tsx`:
+- [x] Create admin sidebar: Dashboard, Users, Analytics, Settings, Flags, Reports, Lecturer Codes, Bulk Messages
+- [x] Create admin layout at `src/app/_admin/layout.tsx` with role guard (ADMIN only)
+- [x] Build dashboard at `src/app/_admin/dashboard/page.tsx`:
   - Stats cards: total users (students/lecturers/admins), total content, total AI interactions
   - Recent registrations list (last 10)
   - Recent AI queries (last 10)
@@ -1607,109 +1607,109 @@ This runs on first deployment, before any other admin features.
 
 ### 5.3 User management
 
-- [ ] Build users page at `src/app/_admin/users/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/admin/users` -- paginated user list with filters (role, search by name/email)
-  - [ ] `PATCH /api/admin/users/[id]` -- update user (change role, suspend/unsuspend, deactivate). Log to AuditLog.
-  - [ ] `DELETE /api/admin/users/[id]` -- soft-delete user (set deletedAt). Log to AuditLog.
-  - [ ] `GET /api/admin/users/[id]` -- full user detail (profile, activity summary, flag/report history)
-- [ ] User management UI:
-  - [ ] Search input (name or email)
-  - [ ] Role filter tabs: All / Students / Lecturers / Admins
-  - [ ] User table: name, email, role, faculty, registered date, status
-  - [ ] Row actions: View Details, Change Role, Suspend, Delete
-  - [ ] User detail sheet/modal: profile info, content uploaded count, AI queries count, reports against them
-  - [ ] Confirmation dialogs for destructive actions (suspend, delete)
+- [x] Build users page at `src/app/_admin/users/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/admin/users` -- paginated user list with filters (role, search by name/email)
+  - [x] `PATCH /api/admin/users/[id]` -- update user (change role, suspend/unsuspend, deactivate). Log to AuditLog.
+  - [x] `DELETE /api/admin/users/[id]` -- soft-delete user (set deletedAt). Log to AuditLog.
+  - [x] `GET /api/admin/users/[id]` -- full user detail (profile, activity summary, flag/report history)
+- [x] User management UI:
+  - [x] Search input (name or email)
+  - [x] Role filter tabs: All / Students / Lecturers / Admins
+  - [x] User table: name, email, role, faculty, registered date, status
+  - [x] Row actions: View Details, Change Role, Suspend, Delete
+  - [x] User detail sheet/modal: profile info, content uploaded count, AI queries count, reports against them
+  - [x] Confirmation dialogs for destructive actions (suspend, delete)
 
 ### 5.4 University settings
 
-- [ ] Build settings page at `src/app/_admin/settings/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/admin/settings` -- return AppSettings
-  - [ ] `PATCH /api/admin/settings` -- update settings. Log to AuditLog.
-  - [ ] `POST /api/admin/faculties` -- add faculty
-  - [ ] `PATCH /api/admin/faculties/[id]` -- update faculty
-  - [ ] `DELETE /api/admin/faculties/[id]` -- deactivate faculty (soft)
-  - [ ] `POST /api/admin/programs` -- add program
-  - [ ] `PATCH /api/admin/programs/[id]` -- update program
-  - [ ] `DELETE /api/admin/programs/[id]` -- deactivate program (soft)
-- [ ] Settings UI:
-  - [ ] Tabs: General, Academic Structure, API Keys, Policies, Token Pricing
-  - [ ] General: university name, logo, colors, domain, student ID pattern
-  - [ ] Academic structure: faculty list with inline add/edit, programs nested under each faculty
-  - [ ] API keys: masked display with "Update" buttons (never show full keys after initial entry)
-  - [ ] Policies: rich text or markdown editor for TOS, privacy policy, code of conduct, content policy
-  - [ ] Token pricing: JSON editor for token packages, referral bonus amount, free queries/day, suspension hours
+- [x] Build settings page at `src/app/_admin/settings/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/admin/settings` -- return AppSettings
+  - [x] `PATCH /api/admin/settings` -- update settings. Log to AuditLog.
+  - [x] `POST /api/admin/faculties` -- add faculty
+  - [x] `PATCH /api/admin/faculties/[id]` -- update faculty
+  - [x] `DELETE /api/admin/faculties/[id]` -- deactivate faculty (soft)
+  - [x] `POST /api/admin/programs` -- add program
+  - [x] `PATCH /api/admin/programs/[id]` -- update program
+  - [x] `DELETE /api/admin/programs/[id]` -- deactivate program (soft)
+- [x] Settings UI:
+  - [x] Tabs: General, Academic Structure, API Keys, Policies, Token Pricing
+  - [x] General: university name, logo, colors, domain, student ID pattern
+  - [x] Academic structure: faculty list with inline add/edit, programs nested under each faculty
+  - [x] API keys: masked display with "Update" buttons (never show full keys after initial entry)
+  - [x] Policies: rich text or markdown editor for TOS, privacy policy, code of conduct, content policy
+  - [x] Token pricing: JSON editor for token packages, referral bonus amount, free queries/day, suspension hours
 
 ### 5.5 Content moderation
 
-- [ ] Build flags page at `src/app/_admin/flags/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/admin/flags` -- list content flags, filterable by status (pending/reviewed/resolved)
-  - [ ] `PATCH /api/admin/flags/[id]` -- resolve flag: approve (dismiss), remove content, warn uploader, suspend uploader. Log to AuditLog.
-- [ ] Flags UI:
-  - [ ] Tabs: Pending / Reviewed / Resolved
-  - [ ] Flag cards: flagged content title, reporter name, reason, date
-  - [ ] Expand to see: content preview (link to content), reporter details, content author
-  - [ ] Actions: Dismiss (mark as reviewed, no action), Remove Content (set status ARCHIVED), Warn Uploader (send notification), Suspend Uploader (set isSuspended = true)
-  - [ ] Resolution notes textarea
+- [x] Build flags page at `src/app/_admin/flags/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/admin/flags` -- list content flags, filterable by status (pending/reviewed/resolved)
+  - [x] `PATCH /api/admin/flags/[id]` -- resolve flag: approve (dismiss), remove content, warn uploader, suspend uploader. Log to AuditLog.
+- [x] Flags UI:
+  - [x] Tabs: Pending / Reviewed / Resolved
+  - [x] Flag cards: flagged content title, reporter name, reason, date
+  - [x] Expand to see: content preview (link to content), reporter details, content author
+  - [x] Actions: Dismiss (mark as reviewed, no action), Remove Content (set status ARCHIVED), Warn Uploader (send notification), Suspend Uploader (set isSuspended = true)
+  - [x] Resolution notes textarea
 
 ### 5.6 User reports
 
-- [ ] Build reports page at `src/app/_admin/reports/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/admin/reports` -- list user reports, filterable by status
-  - [ ] `PATCH /api/admin/reports/[id]` -- resolve report: dismiss, warn user, suspend user, ban user. Log to AuditLog.
-- [ ] Reports UI:
-  - [ ] Similar structure to flags page
-  - [ ] Report cards: reported user, reporter, reason, context (link to message/post), date
-  - [ ] Actions: Dismiss, Warn (notification), Suspend (with reason), Ban (permanent deactivation)
-  - [ ] Admin notes field
+- [x] Build reports page at `src/app/_admin/reports/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/admin/reports` -- list user reports, filterable by status
+  - [x] `PATCH /api/admin/reports/[id]` -- resolve report: dismiss, warn user, suspend user, ban user. Log to AuditLog.
+- [x] Reports UI:
+  - [x] Similar structure to flags page
+  - [x] Report cards: reported user, reporter, reason, context (link to message/post), date
+  - [x] Actions: Dismiss, Warn (notification), Suspend (with reason), Ban (permanent deactivation)
+  - [x] Admin notes field
 
 ### 5.7 Lecturer codes
 
-- [ ] Build codes page at `src/app/_admin/codes/page.tsx`
-- [ ] API routes:
-  - [ ] `GET /api/admin/lecturer-codes` -- list all codes (active and revoked)
-  - [ ] `POST /api/admin/lecturer-codes` -- create new code (hash before storing)
-  - [ ] `DELETE /api/admin/lecturer-codes/[id]` -- revoke code (set revokedAt)
-- [ ] Codes UI:
-  - [ ] Table: code (masked after creation), lecturer name, faculty, status, created date
-  - [ ] "Generate New Code" button -> dialog: lecturer name, faculty, generates random code, shows code ONCE (user must copy it)
-  - [ ] Revoke button with confirmation
+- [x] Build codes page at `src/app/_admin/codes/page.tsx`
+- [x] API routes:
+  - [x] `GET /api/admin/lecturer-codes` -- list all codes (active and revoked)
+  - [x] `POST /api/admin/lecturer-codes` -- create new code (hash before storing)
+  - [x] `DELETE /api/admin/lecturer-codes/[id]` -- revoke code (set revokedAt)
+- [x] Codes UI:
+  - [x] Table: code (masked after creation), lecturer name, faculty, status, created date
+  - [x] "Generate New Code" button -> dialog: lecturer name, faculty, generates random code, shows code ONCE (user must copy it)
+  - [x] Revoke button with confirmation
 
 ### 5.8 Bulk messaging
 
-- [ ] Build bulk messages page at `src/app/_admin/messages/page.tsx`
-- [ ] API route: `POST /api/admin/messages/bulk`:
+- [x] Build bulk messages page at `src/app/_admin/messages/page.tsx`
+- [x] API route: `POST /api/admin/messages/bulk`:
   - Accept: subject, body, filter (all users, specific role, specific faculty, specific semester)
   - Create Message records for each matching user
   - Create Notification records
   - Optionally send email via Resend (with rate limiting)
-- [ ] Bulk message UI:
-  - [ ] Recipient filter: All Users / All Students / All Lecturers / Specific Faculty / Specific Semester
-  - [ ] Subject input
-  - [ ] Message body textarea
-  - [ ] Preview: "This will be sent to X users"
-  - [ ] Send button with confirmation
+- [x] Bulk message UI:
+  - [x] Recipient filter: All Users / All Students / All Lecturers / Specific Faculty / Specific Semester
+  - [x] Subject input
+  - [x] Message body textarea
+  - [x] Preview: "This will be sent to X users"
+  - [x] Send button with confirmation
 
 ### 5.9 Audit log
 
-- [ ] API route: `GET /api/admin/audit-log` -- paginated, filterable by action type, user, date range
-- [ ] Viewable from admin dashboard or a dedicated audit page
-- [ ] Table: timestamp, admin name, action description, entity affected
+- [x] API route: `GET /api/admin/audit-log` -- paginated, filterable by action type, user, date range
+- [x] Viewable from admin dashboard or a dedicated audit page
+- [x] Table: timestamp, admin name, action description, entity affected
 
 ### Phase 5 verification
 
-- [ ] Setup wizard creates AppSettings, admin user, faculties, programs
-- [ ] Second visit to /setup redirects away
-- [ ] Admin can CRUD users, faculties, programs
-- [ ] Lecturer codes can be created, shown once, and revoked
-- [ ] Content flags are reviewable and resolvable
-- [ ] User reports flow works end-to-end
-- [ ] Bulk messages reach the correct audience
-- [ ] Audit log records all admin actions
-- [ ] All admin routes reject non-admin users
+- [x] Setup wizard creates AppSettings, admin user, faculties, programs
+- [x] Second visit to /setup redirects away
+- [x] Admin can CRUD users, faculties, programs
+- [x] Lecturer codes can be created, shown once, and revoked
+- [x] Content flags are reviewable and resolvable
+- [x] User reports flow works end-to-end
+- [x] Bulk messages reach the correct audience
+- [x] Audit log records all admin actions
+- [x] All admin routes reject non-admin users
 
 ---
 
