@@ -28,6 +28,7 @@ export async function GET() {
         avatarUrl: true,
         role: true,
         createdAt: true,
+        deletedAt: true,
       },
     });
 
@@ -83,28 +84,4 @@ export async function PATCH(request: Request) {
   }
 }
 
-export async function DELETE() {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    // Soft delete with 7-day grace period
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { deletedAt: new Date() },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Account deletion error:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+// Account deletion moved to /api/users/me (DELETE) with password verification and email confirmation
