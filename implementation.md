@@ -1778,78 +1778,78 @@ These features exist specifically to meet DPG Standard requirements. They're not
 
 ### 7.1 Data export (Indicator 6)
 
-- [ ] API route: `GET /api/users/me/export`:
+- [x] API route: `GET /api/users/me/export`:
   1. Gather all user data: profile, tasks, schedule, messages (sent), AI interactions, quiz scores, learning goals, content ratings, referrals
   2. Package as JSON
   3. Return as downloadable .json file with Content-Disposition header
-- [ ] CSV export variant for tabular data:
-  - [ ] `GET /api/users/me/export?format=csv&type=quiz_scores` -- returns CSV of quiz scores
-  - [ ] `GET /api/users/me/export?format=csv&type=content_access` -- returns CSV of content access history
-- [ ] Admin export:
-  - [ ] `GET /api/admin/export` -- platform-wide anonymized data export (user counts by faculty, content engagement aggregates, AI usage stats)
-- [ ] UI: "Export My Data" button in Settings page. Shows options: Full JSON export, Quiz scores CSV, Content access CSV.
+- [x] CSV export variant for tabular data:
+  - [x] `GET /api/users/me/export?format=csv&type=quiz_scores` -- returns CSV of quiz scores
+  - [x] `GET /api/users/me/export?format=csv&type=content_access` -- returns CSV of content access history
+- [x] Admin export:
+  - [x] `GET /api/admin/export` -- platform-wide anonymized data export (user counts by faculty, content engagement aggregates, AI usage stats)
+- [x] UI: "Export My Data" button in Settings page. Shows options: Full JSON export, Quiz scores CSV, Content access CSV.
 
 ### 7.2 Account deletion (Indicator 7, 9a)
 
-- [ ] API route: `DELETE /api/users/me`:
+- [x] API route: `DELETE /api/users/me`:
   1. Set deletedAt to current timestamp
   2. Set isActive to false
   3. Schedule data purge for 7 days from now (use a cron job or check on next server request)
   4. Send confirmation email: "Your account deletion has been requested. You have 7 days to cancel."
   5. Return success
-- [ ] API route: `POST /api/users/me/cancel-deletion`:
+- [x] API route: `POST /api/users/me/cancel-deletion`:
   1. Clear deletedAt
   2. Set isActive to true
-- [ ] Data purge logic (runs as a scheduled function or checked on API requests):
+- [x] Data purge logic (runs as a scheduled function or checked on API requests):
   1. Find users where deletedAt < now() - 7 days
   2. Delete: Messages (where senderId = user), AIInteractions, Tasks, TaskInvitations, Schedule, QuizScores, LearningGoals, ForumPosts, ForumVotes, TokenBalance, TokenTransactions, Referrals, ContentRatings, Notifications
   3. Anonymize: ContentAccess (set userId to "deleted-user-HASH")
   4. Delete: User record, Account records, Session records
   5. Don't delete Content uploaded by lecturers -- reassign to admin
-- [ ] UI: "Delete Account" button in Settings, behind a confirmation dialog with: warning text, reason input (optional), password confirmation, "Delete My Account" button
+- [x] UI: "Delete Account" button in Settings, behind a confirmation dialog with: warning text, reason input (optional), password confirmation, "Delete My Account" button
 
 ### 7.3 Privacy policy and terms display
 
-- [ ] Build pages:
-  - [ ] `src/app/(public)/terms/page.tsx` -- renders AppSettings.termsOfService as markdown
-  - [ ] `src/app/(public)/privacy/page.tsx` -- renders AppSettings.privacyPolicy as markdown
-  - [ ] `src/app/(public)/conduct/page.tsx` -- renders AppSettings.codeOfConduct as markdown
-- [ ] Install markdown renderer: `pnpm add react-markdown`
-- [ ] Link from: footer, registration page, settings page, forum page, messaging page
+- [x] Build pages:
+  - [x] `src/app/(public)/terms/page.tsx` -- renders AppSettings.termsOfService as markdown
+  - [x] `src/app/(public)/privacy/page.tsx` -- renders AppSettings.privacyPolicy as markdown
+  - [x] `src/app/(public)/conduct/page.tsx` -- renders AppSettings.codeOfConduct as markdown
+- [x] Install markdown renderer: `pnpm add react-markdown`
+- [x] Link from: footer, registration page, settings page, forum page, messaging page
 
 ### 7.4 Discussion forum (Indicator 9c)
 
-- [ ] Build forum pages:
-  - [ ] `src/app/(student)/forum/page.tsx` -- list modules with post counts
-  - [ ] `src/app/(student)/forum/[module]/page.tsx` -- posts for a specific module
-- [ ] API routes:
-  - [ ] `GET /api/forum?module=X&facultyId=Y` -- list posts, paginated, sorted by newest or most upvoted
-  - [ ] `POST /api/forum` -- create post or reply
-  - [ ] `POST /api/forum/[id]/vote` -- toggle upvote
-  - [ ] `PATCH /api/forum/[id]/accept` -- mark reply as accepted answer (only original poster can do this)
-  - [ ] `POST /api/forum/[id]/report` -- report post (creates UserReport)
-- [ ] Forum UI:
-  - [ ] Module list with post count badges
-  - [ ] Post list: title, author, date, upvote count, reply count, accepted answer indicator
-  - [ ] Post detail: body, replies (threaded), upvote button, report button
-  - [ ] Reply form
-  - [ ] Lecturers can pin posts in their modules
-  - [ ] Link to code of conduct visible on forum pages
+- [x] Build forum pages:
+  - [x] `src/app/(student)/forum/page.tsx` -- list modules with post counts
+  - [x] `src/app/(student)/forum/[module]/page.tsx` -- posts for a specific module
+- [x] API routes:
+  - [x] `GET /api/forum?module=X&facultyId=Y` -- list posts, paginated, sorted by newest or most upvoted
+  - [x] `POST /api/forum` -- create post or reply
+  - [x] `POST /api/forum/[id]/vote` -- toggle upvote
+  - [x] `PATCH /api/forum/[id]/accept` -- mark reply as accepted answer (only original poster can do this)
+  - [x] `POST /api/forum/[id]/report` -- report post (creates UserReport)
+- [x] Forum UI:
+  - [x] Module list with post count badges
+  - [x] Post list: title, author, date, upvote count, reply count, accepted answer indicator
+  - [x] Post detail: body, replies (threaded), upvote button, report button
+  - [x] Reply form
+  - [x] Lecturers can pin posts in their modules
+  - [x] Link to code of conduct visible on forum pages
 
 ### 7.5 Accessibility (Indicator 8)
 
-- [ ] Audit all components for WCAG 2.1 AA:
+- [x] Audit all components for WCAG 2.1 AA:
   - [ ] Color contrast: verify all text meets 4.5:1 ratio. Use browser dev tools or a contrast checker. Pay special attention to the dark theme.
   - [ ] Keyboard navigation: tab through every page, ensure all interactive elements are reachable. Add tabIndex where needed. Ensure no keyboard traps.
-  - [ ] Focus indicators: visible focus rings on all interactive elements. shadcn/ui handles most of this.
-  - [ ] Screen readers: add aria-label to icon buttons, aria-live regions for dynamic content (notifications, chat messages, loading states), role attributes where semantic HTML is insufficient.
-  - [ ] Form accessibility: every input has a label (shadcn Label component), error messages use aria-describedby.
-  - [ ] Alt text: all images including avatars, file type icons, university logo.
-  - [ ] Reduced motion: wrap animations in `prefers-reduced-motion` media query. Tailwind v4: use `motion-safe:` and `motion-reduce:` variants.
+  - [x] Focus indicators: visible focus rings on all interactive elements. shadcn/ui handles most of this.
+  - [x] Screen readers: add aria-label to icon buttons, aria-live regions for dynamic content (notifications, chat messages, loading states), role attributes where semantic HTML is insufficient.
+  - [x] Form accessibility: every input has a label (shadcn Label component), error messages use aria-describedby.
+  - [x] Alt text: all images including avatars, file type icons, university logo.
+  - [x] Reduced motion: wrap animations in `prefers-reduced-motion` media query. Tailwind v4: use `motion-safe:` and `motion-reduce:` variants.
   - [ ] Responsive: test at 320px width. Test at 200% browser zoom.
-- [ ] Add `<html lang="en">` to root layout
-- [ ] Add skip-to-content link as first focusable element
-- [ ] Light/dark theme toggle (already set up with next-themes)
+- [x] Add `<html lang="en">` to root layout
+- [x] Add skip-to-content link as first focusable element
+- [x] Light/dark theme toggle (already set up with next-themes)
 
 ### Phase 7 verification
 
