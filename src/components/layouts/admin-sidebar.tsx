@@ -84,7 +84,7 @@ export function AdminSidebar() {
       <SidebarFooter className="border-t p-4">
         <div className="flex items-center gap-3">
           <Avatar className="size-8">
-            <AvatarImage src={user?.image ?? undefined} />
+            <AvatarImage src={user?.image ?? undefined} alt={user?.name ?? "User avatar"} />
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0">

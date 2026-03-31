@@ -14,7 +14,7 @@ export function StudentLayoutClient({
       <StudentSidebar />
       <SidebarInset>
         <StudentHeader />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main id="main-content" className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
