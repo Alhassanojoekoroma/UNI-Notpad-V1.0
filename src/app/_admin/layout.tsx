@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { AdminLayoutClient } from "./layout-client";
 
 export default async function AdminLayout({
   children,
@@ -16,5 +17,5 @@ export default async function AdminLayout({
     redirect("/");
   }
 
-  return <>{children}</>;
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 }
