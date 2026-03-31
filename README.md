@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# UniNotepad
 
-## Getting Started
+Open-source learning platform for universities in developing countries. Most students at African universities can't afford ChatGPT, and course materials live on random WhatsApp groups or don't exist digitally at all. UniNotepad puts everything in one place: course materials, an AI study assistant, task management, and messaging.
 
-First, run the development server:
+This started as LUSL Notepad at Limkokwing University Sierra Leone in early 2026. Students used it, we learned what worked, and rebuilt it from scratch so any university can run their own instance.
+
+Aligned with UN Sustainable Development Goals:
+- [SDG 4.3](https://sdgs.un.org/goals/goal4) -- equal access to affordable higher education
+- [SDG 4.4](https://sdgs.un.org/goals/goal4) -- relevant skills for employment through AI study tools
+- [SDG 4.a](https://sdgs.un.org/goals/goal4) -- effective learning environments replacing scattered WhatsApp groups
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+git clone https://github.com/your-org/uninotepad.git
+cd uninotepad
+pnpm install
+cp .env.example .env.local   # fill in DATABASE_URL and AUTH_SECRET at minimum
+pnpm dlx prisma migrate dev
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 and complete the setup wizard to create an admin account and configure your university.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Framework | Next.js 16 | App Router, Server Components, `proxy.ts` for subdomain routing |
+| Database | PostgreSQL + Prisma 6 | 25 models, 11 enums |
+| Auth | NextAuth v5 | Email/password, Google OAuth, Facebook OAuth |
+| UI | shadcn/ui + Tailwind CSS v4 | Components copied into project, `@theme` inline config |
+| AI | Google Gemini | Configurable model (Flash/Pro), 10 learning tools |
+| File storage | Cloudinary | PDFs, images, documents |
+| Email | Resend | Transactional email (verification, password reset) |
+| Payments | Monime + Stripe | Mobile money (Sierra Leone) and card payments |
+| TTS | Web Speech API / ElevenLabs | Free browser TTS with optional premium fallback |
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+UniNotepad uses subdomain-based routing to separate user roles. A single Next.js app handles everything through `proxy.ts`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| URL | Who | Internal route |
+|-----|-----|---------------|
+| `yourdomain.com` | Public + Students | `src/app/(public)/` and `src/app/(student)/` |
+| `admin.yourdomain.com` | Administrators | `src/app/_admin/` |
+| `lecturer.yourdomain.com` | Lecturers | `src/app/_lecturer/` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+For local development, `*.localhost` resolves natively in most browsers -- `admin.localhost:3000` and `lecturer.localhost:3000` work without `/etc/hosts` changes.
 
-## Deploy on Vercel
+```
+src/app/
+├── (public)/       # Landing, login, register, setup wizard
+├── (student)/      # Student dashboard and features
+├── _admin/         # Admin panel (rewrite target for admin.*)
+├── _lecturer/      # Lecturer dashboard (rewrite target for lecturer.*)
+└── api/            # All API routes (~95 endpoints)
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Documentation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Configuration](docs/configuration.md) -- environment variables, AppSettings, provider setup
+- [Self-hosting](docs/self-hosting.md) -- deploy on a VPS with Caddy
+- [API reference](docs/api-reference.md) -- every endpoint documented
+- [Contributing](CONTRIBUTING.md) -- local dev setup, code style, PR process
+
+## License
+
+MIT -- see [LICENSE](./LICENSE).
