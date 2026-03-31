@@ -31,7 +31,22 @@ export default async function PublicLayout({
           </div>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main id="main-content" className="flex-1">{children}</main>
+      <footer className="border-t">
+        <div className="container mx-auto flex items-center justify-center gap-4 px-4 py-4 text-sm text-muted-foreground">
+          <Link href="/terms" className="hover:underline">
+            Terms of Service
+          </Link>
+          <span aria-hidden="true">&middot;</span>
+          <Link href="/privacy" className="hover:underline">
+            Privacy Policy
+          </Link>
+          <span aria-hidden="true">&middot;</span>
+          <Link href="/conduct" className="hover:underline">
+            Code of Conduct
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }

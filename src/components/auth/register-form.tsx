@@ -369,7 +369,7 @@ export function RegisterForm() {
               />
               <Label htmlFor="terms" className="text-sm leading-relaxed">
                 I agree to the{" "}
-                <Link href="#" className="text-primary hover:underline">
+                <Link href="/terms" target="_blank" className="text-primary hover:underline">
                   Terms of Service
                 </Link>
               </Label>
@@ -382,7 +382,7 @@ export function RegisterForm() {
               />
               <Label htmlFor="privacy" className="text-sm leading-relaxed">
                 I agree to the{" "}
-                <Link href="#" className="text-primary hover:underline">
+                <Link href="/privacy" target="_blank" className="text-primary hover:underline">
                   Privacy Policy
                 </Link>
               </Label>
