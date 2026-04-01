@@ -1,5 +1,6 @@
 "use client"
 
+import { cloneElement, type ReactElement } from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -46,14 +47,34 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  render,
+  children,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  if (render && typeof render !== "function") {
+    const {
+      disabled: _disabled,
+      focusableWhenDisabled: _fwd,
+      nativeButton: _nb,
+      ...elementProps
+    } = props as Record<string, unknown>
+    return cloneElement(render as ReactElement<Record<string, unknown>>, {
+      "data-slot": "button",
+      className: cn(buttonVariants({ variant, size, className })),
+      children,
+      ...elementProps,
+    })
+  }
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      {...(render ? { render, nativeButton: false } : {})}
       {...props}
-    />
+    >
+      {children}
+    </ButtonPrimitive>
   )
 }
 
