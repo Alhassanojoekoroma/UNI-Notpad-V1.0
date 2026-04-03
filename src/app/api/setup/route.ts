@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { setupWizardSchema } from "@/lib/validators/admin";
+import { DEFAULT_PRIVACY_POLICY } from "@/lib/defaults/privacy-policy";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
           monimeApiKey: data.monimeApiKey ?? null,
           stripeSecretKey: data.stripeSecretKey ?? null,
           termsOfService: data.termsOfService ?? null,
-          privacyPolicy: data.privacyPolicy ?? null,
+          privacyPolicy: data.privacyPolicy || DEFAULT_PRIVACY_POLICY,
           codeOfConduct: data.codeOfConduct ?? null,
           isSetupComplete: true,
         },
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
           monimeApiKey: data.monimeApiKey ?? null,
           stripeSecretKey: data.stripeSecretKey ?? null,
           termsOfService: data.termsOfService ?? null,
-          privacyPolicy: data.privacyPolicy ?? null,
+          privacyPolicy: data.privacyPolicy || DEFAULT_PRIVACY_POLICY,
           codeOfConduct: data.codeOfConduct ?? null,
           isSetupComplete: true,
         },

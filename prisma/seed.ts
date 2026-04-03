@@ -1,5 +1,6 @@
 import { PrismaClient, UserRole, ContentType, ContentStatus, Priority, TaskStatus, GoalStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { DEFAULT_PRIVACY_POLICY } from "../src/lib/defaults/privacy-policy";
 
 const prisma = new PrismaClient();
 
@@ -22,6 +23,7 @@ async function main() {
       studentIdPattern: "^90500\\d{4,}$",
       maxSemesters: 8,
       geminiModel: "gemini-2.0-flash",
+      privacyPolicy: DEFAULT_PRIVACY_POLICY,
       freeQueriesPerDay: 20,
       freeSuspensionHours: 7,
       referralBonusTokens: 5,
