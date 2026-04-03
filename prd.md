@@ -820,7 +820,7 @@ CONTRIBUTING.md covers:
 |-----------|---------------|
 | 1. SDG relevance | Targets SDG 4.3 (affordable higher education access), 4.4 (employment skills), 4.a (learning environments). Deployed and in use at a university in Sierra Leone. |
 | 2. Open license | MIT License. Full source code on GitHub. |
-| 3. Clear ownership | Copyright held by the UniNotepad project contributors. Copyright notice in LICENSE file and source headers. |
+| 3. Clear ownership | Copyright held by Alhassan Ojoe Koroma. Copyright notice in LICENSE file. Author field in package.json. |
 | 4. Platform independence | Every proprietary dependency has a documented open-source alternative. The platform runs entirely on free, open-source infrastructure (Postgres, Ollama, MinIO, Nodemailer). |
 | 5. Documentation | README, /docs folder, CONTRIBUTING.md, OpenAPI spec, inline comments. Setup wizard guides non-technical admins through configuration. |
 | 6. Non-PII data extraction | JSON and CSV data export for all users. Admin can export anonymized platform-wide data. All exports use open formats. |
