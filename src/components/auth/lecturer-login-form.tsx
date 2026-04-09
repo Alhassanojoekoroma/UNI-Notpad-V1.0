@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { signIn, signOut, getSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,15 +9,12 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 
-export function LoginForm() {
-  const router = useRouter();
+export function LecturerLoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -39,10 +34,17 @@ export function LoginForm() {
 
       if (result?.error) {
         setError("Invalid email or password");
-      } else {
-        router.push("/dashboard");
-        router.refresh();
+        return;
       }
+
+      const session = await getSession();
+      if (session?.user?.role !== "LECTURER") {
+        await signOut({ redirect: false });
+        setError("This account is not authorized for the lecturer portal.");
+        return;
+      }
+
+      window.location.href = "/dashboard";
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -50,16 +52,11 @@ export function LoginForm() {
     }
   }
 
-  async function handleOAuth(provider: "google" | "facebook") {
-    setIsLoading(true);
-    await signIn(provider, { callbackUrl: "/dashboard" });
-  }
-
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your account</CardDescription>
+        <CardTitle className="text-2xl">Lecturer sign in</CardTitle>
+        <CardDescription>Sign in to manage your content</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -73,7 +70,7 @@ export function LoginForm() {
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="lecturer@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -81,15 +78,7 @@ export function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-muted-foreground hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
+            <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
@@ -104,39 +93,7 @@ export function LoginForm() {
             Sign In
           </Button>
         </form>
-
-        <div className="relative my-6">
-          <Separator />
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-            or continue with
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            onClick={() => handleOAuth("google")}
-            disabled={isLoading}
-          >
-            Google
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => handleOAuth("facebook")}
-            disabled={isLoading}
-          >
-            Facebook
-          </Button>
-        </div>
       </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline">
-            Register
-          </Link>
-        </p>
-      </CardFooter>
     </Card>
   );
 }
