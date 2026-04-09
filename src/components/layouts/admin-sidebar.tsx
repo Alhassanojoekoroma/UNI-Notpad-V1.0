@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Users,
@@ -11,8 +12,15 @@ import {
   AlertTriangle,
   KeyRound,
   Send,
+  LogOut,
 } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -81,21 +89,34 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t p-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="size-8">
-            <AvatarImage src={user?.image ?? undefined} alt={user?.name ?? "User avatar"} />
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium truncate">
-              {user?.name ?? "Admin"}
-            </span>
-            <span className="text-xs text-muted-foreground truncate">
-              {user?.email}
-            </span>
-          </div>
-        </div>
+      <SidebarFooter className="border-t p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="flex w-full items-center gap-3 rounded-md p-2 text-left outline-hidden hover:bg-accent focus-visible:bg-accent"
+          >
+            <Avatar className="size-8">
+              <AvatarImage src={user?.image ?? undefined} alt={user?.name ?? "User avatar"} />
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium truncate">
+                {user?.name ?? "Admin"}
+              </span>
+              <span className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </span>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-56">
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => signOut({ callbackUrl: "/admin/login" })}
+            >
+              <LogOut />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );
