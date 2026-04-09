@@ -44,8 +44,12 @@ Single-tenant standalone deployment via Docker. No vendor lock-in — every paid
 src/app/
 ├── (public)/       # Landing, login, register, setup wizard (route group)
 ├── (student)/      # Student dashboard and features (route group)
-├── _admin/         # Admin panel (underscore prefix — rewrite target for admin.* subdomain)
-├── _lecturer/      # Lecturer dashboard (underscore prefix — rewrite target for lecturer.*)
+├── admin/          # Admin panel — rewrite target for admin.* subdomain
+│   ├── login/      # Public admin login (outside (dashboard) auth wrapper)
+│   └── (dashboard)/  # Auth-protected admin chrome (route group)
+├── lecturer/       # Lecturer dashboard — rewrite target for lecturer.* subdomain
+│   ├── login/
+│   └── (dashboard)/
 └── api/            # All API routes
 src/
 ├── components/     # UI components (ui/ has shadcn, shared/ has custom)
@@ -57,7 +61,7 @@ prisma/
 └── migrations/
 ```
 
-**Important**: `_admin/` and `_lecturer/` use underscore prefix (NOT parentheses) because proxy.ts rewrites `admin.*` → `/_admin/*`. Parenthesized route groups are invisible in URLs.
+**Important**: `admin/` and `lecturer/` are plain (routable) folders — `proxy.ts` rewrites `admin.*` → `/admin/*` and `lecturer.*` → `/lecturer/*`. Folders prefixed with `_` are private in Next.js and excluded from routing, so do NOT use that prefix here. `proxy.ts` also blocks direct root-domain access to `/admin` and `/lecturer` so those areas remain subdomain-only. The auth-protected chrome lives in `(dashboard)` route groups so the `/login` page can sit outside the auth-required layout.
 
 ## Key Design Decisions
 

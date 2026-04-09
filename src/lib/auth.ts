@@ -11,7 +11,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma) as never,
   session: {
-    strategy: "database",
+    strategy: "jwt",
   },
   providers: [
     Google({
@@ -38,7 +38,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.password
         );
         if (!isValid) return null;
-        return user;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          facultyId: user.facultyId,
+          semester: user.semester,
+          programId: user.programId,
+          studentId: user.studentId,
+        };
       },
     }),
   ],
