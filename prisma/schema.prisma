@@ -184,6 +184,7 @@ model User {
   @@index([email])
   @@index([role])
   @@index([facultyId, semester])
+  @@index([deletedAt])
 }
 
 model Faculty {
@@ -499,6 +500,7 @@ model ContentFlag {
   reporter User    @relation("FlagReporter", fields: [reporterId], references: [id], onDelete: Cascade)
   reviewer User?   @relation("FlagReviewer", fields: [reviewedBy], references: [id])
 
+  @@unique([contentId, reporterId])
   @@index([status])
 }
 
@@ -536,6 +538,7 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([isRead])
 }
 
 model LecturerCode {
