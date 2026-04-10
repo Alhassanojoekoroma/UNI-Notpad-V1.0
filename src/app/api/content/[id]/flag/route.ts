@@ -38,6 +38,17 @@ export async function POST(
       );
     }
 
+    // Prevent duplicate flags from the same user
+    const existingFlag = await prisma.contentFlag.findFirst({
+      where: { contentId: id, reporterId: session.user.id },
+    });
+    if (existingFlag) {
+      return NextResponse.json(
+        { success: false, error: "You have already flagged this content" },
+        { status: 409 }
+      );
+    }
+
     const flag = await prisma.contentFlag.create({
       data: {
         contentId: id,

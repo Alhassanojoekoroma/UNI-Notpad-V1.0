@@ -128,6 +128,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate lecturer has authority over the target faculty
+    if (session.user.facultyId && parsed.data.facultyId !== session.user.facultyId) {
+      return NextResponse.json(
+        { success: false, error: "You can only upload content to your assigned faculty" },
+        { status: 403 }
+      );
+    }
+
     // Upload file to Cloudinary
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);

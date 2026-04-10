@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createForumPostSchema } from "@/lib/validators/forum";
 import { createNotification } from "@/lib/notifications";
+import { stripHtmlTags } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = request.nextUrl;
     const module = searchParams.get("module");
-    const facultyId = searchParams.get("facultyId") ?? session.user.facultyId;
+    // Students can only access their own faculty's forum
+    const facultyId =
+      session.user.role === "STUDENT"
+        ? session.user.facultyId
+        : (searchParams.get("facultyId") ?? session.user.facultyId);
     const sort = searchParams.get("sort") ?? "newest";
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20)));
@@ -135,7 +140,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { module, facultyId, title, body: postBody, parentId } = parsed.data;
+    const { module, facultyId, title, body: rawBody, parentId } = parsed.data;
+    const postBody = stripHtmlTags(rawBody);
 
     // If reply, verify parent exists in same module
     if (parentId) {

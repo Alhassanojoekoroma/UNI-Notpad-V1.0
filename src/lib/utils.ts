@@ -34,6 +34,10 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
+export function stripHtmlTags(input: string): string {
+  return input.replace(/<[^>]*>/g, "");
+}
+
 export function generateReferralCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";

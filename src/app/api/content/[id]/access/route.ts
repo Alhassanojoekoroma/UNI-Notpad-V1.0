@@ -25,6 +25,28 @@ export async function POST(
       );
     }
 
+    // Verify user has permission to access this content
+    const content = await prisma.content.findUnique({
+      where: { id },
+      select: { facultyId: true, semester: true },
+    });
+    if (!content) {
+      return NextResponse.json(
+        { success: false, error: "Content not found" },
+        { status: 404 }
+      );
+    }
+    if (
+      session.user.role === "STUDENT" &&
+      (content.facultyId !== session.user.facultyId ||
+        content.semester !== session.user.semester)
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
     await prisma.$transaction([
       prisma.contentAccess.create({
         data: {

@@ -76,6 +76,15 @@ export async function PATCH(
     }
 
     const { id } = await params;
+
+    // Prevent admin from changing their own role
+    if (id === session.user.id) {
+      return NextResponse.json(
+        { success: false, error: "Cannot modify your own account via admin panel" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const data = userUpdateSchema.parse(body);
 
