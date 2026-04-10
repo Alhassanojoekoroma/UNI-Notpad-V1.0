@@ -2,7 +2,7 @@
 
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { StudentSidebar } from "@/components/layouts/student-sidebar";
-import { StudentHeader } from "@/components/layouts/header";
+import { AppHeader } from "@/components/layouts/header";
 
 export function StudentLayoutClient({
   children,
@@ -13,7 +13,7 @@ export function StudentLayoutClient({
     <SidebarProvider>
       <StudentSidebar />
       <SidebarInset>
-        <StudentHeader />
+        <AppHeader />
         <main id="main-content" className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
