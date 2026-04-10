@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,14 +29,34 @@ function formatDate(date: string) {
 
 export function PostDetail({ postId }: PostDetailProps) {
   const { user } = useSession();
+  const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["forum-post", postId],
     queryFn: async () => {
       const res = await fetch(`/api/forum/${postId}`);
+      if (!res.ok) throw new Error("Failed to fetch post");
       return res.json();
     },
   });
+
+  const acceptMutation = useMutation({
+    mutationFn: async (replyId: string) => {
+      await fetch(`/api/forum/${replyId}/accept`, { method: "PATCH" });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forum-post", postId] }),
+  });
+
+  const pinMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await fetch(`/api/forum/${id}/pin`, { method: "PATCH" });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forum-post", postId] }),
+  });
+
+  if (isError) {
+    return <p className="text-destructive">Failed to load post. Please try again.</p>;
+  }
 
   if (isLoading) {
     return (
@@ -57,16 +77,6 @@ export function PostDetail({ postId }: PostDetailProps) {
 
   const isLecturer =
     user?.role === "LECTURER" || user?.role === "ADMIN";
-
-  async function handleAccept(replyId: string) {
-    await fetch(`/api/forum/${replyId}/accept`, { method: "PATCH" });
-    window.location.reload();
-  }
-
-  async function handleTogglePin() {
-    await fetch(`/api/forum/${post.id}/pin`, { method: "PATCH" });
-    window.location.reload();
-  }
 
   return (
     <div className="space-y-6">
@@ -108,7 +118,7 @@ export function PostDetail({ postId }: PostDetailProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleTogglePin}
+                onClick={() => pinMutation.mutate(post.id)}
               >
                 <Pin className="size-4 mr-1" />
                 {post.isPinned ? "Unpin" : "Pin"}
@@ -178,7 +188,7 @@ export function PostDetail({ postId }: PostDetailProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleAccept(reply.id)}
+                    onClick={() => acceptMutation.mutate(reply.id)}
                   >
                     <CheckCircle className="size-4 mr-1" />
                     Accept Answer

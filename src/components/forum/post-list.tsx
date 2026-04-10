@@ -59,7 +59,7 @@ export function PostList({ module }: PostListProps) {
   const [sort, setSort] = useState<"newest" | "popular">("newest");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["forum-posts", module, sort, page],
     queryFn: async () => {
       const res = await fetch(
@@ -68,6 +68,14 @@ export function PostList({ module }: PostListProps) {
       return res.json();
     },
   });
+
+  if (isError) {
+    return (
+      <div className="py-8 text-center text-destructive">
+        Failed to load posts. Please try again later.
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

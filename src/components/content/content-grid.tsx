@@ -26,7 +26,7 @@ export function ContentGrid() {
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(search, 300);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["content", debouncedSearch, contentType, sort, page],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -63,7 +63,11 @@ export function ContentGrid() {
         }}
       />
 
-      {isLoading ? (
+      {isError ? (
+        <div className="py-8 text-center text-destructive">
+          Failed to load materials. Please try again later.
+        </div>
+      ) : isLoading ? (
         <div className="py-8 text-center text-muted-foreground">
           Loading materials...
         </div>

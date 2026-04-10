@@ -101,7 +101,9 @@ export function MessageInbox() {
         </TabsList>
 
         <TabsContent value="inbox" className="space-y-1">
-          {inboxQuery.isLoading ? (
+          {inboxQuery.isError ? (
+            <p className="py-8 text-center text-destructive">Failed to load messages.</p>
+          ) : inboxQuery.isLoading ? (
             <p className="py-8 text-center text-muted-foreground">Loading...</p>
           ) : inboxMessages.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">No messages yet.</p>
