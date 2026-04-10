@@ -1,6 +1,9 @@
 import type { NextAuthConfig } from "next-auth";
 import type { UserRole } from "@prisma/client";
 
+// Re-validate user against DB every 5 minutes to catch deletions/suspensions
+const SESSION_REVALIDATE_MS = 5 * 60 * 1000;
+
 export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
@@ -23,10 +26,47 @@ export const authConfig: NextAuthConfig = {
         token.semester = user.semester;
         token.programId = user.programId;
         token.studentId = user.studentId;
+        token.lastVerified = Date.now();
       }
+
+      // Periodically re-check user is still active in DB
+      const lastVerified = (token.lastVerified as number) ?? 0;
+      if (Date.now() - lastVerified > SESSION_REVALIDATE_MS) {
+        const { prisma } = await import("@/lib/prisma");
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub! },
+          select: {
+            deletedAt: true,
+            isSuspended: true,
+            isActive: true,
+            role: true,
+            facultyId: true,
+            semester: true,
+            programId: true,
+            studentId: true,
+          },
+        });
+        if (!dbUser || dbUser.deletedAt || dbUser.isSuspended || !dbUser.isActive) {
+          // Return empty token to force sign-out
+          return { ...token, invalidated: true };
+        }
+        // Refresh role/faculty data in case admin changed it
+        token.role = dbUser.role;
+        token.facultyId = dbUser.facultyId;
+        token.semester = dbUser.semester;
+        token.programId = dbUser.programId;
+        token.studentId = dbUser.studentId;
+        token.lastVerified = Date.now();
+      }
+
       return token;
     },
     async session({ session, token, user }) {
+      // If user was invalidated (deleted/suspended), return empty session
+      if (token?.invalidated) {
+        session.user.id = "";
+        return session;
+      }
       // For JWT strategy (credentials)
       if (token) {
         session.user.id = token.sub!;

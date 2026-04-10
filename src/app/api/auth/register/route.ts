@@ -17,9 +17,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const { name, email, password, role, studentId, referralCode } = parsed.data;
-    const { accessCode, facultyId, semester, programId, termsAccepted, privacyAccepted } =
-      body as Record<string, unknown>;
+    const {
+      name, email, password, role, studentId, referralCode,
+      accessCode, facultyId, semester, programId, termsAccepted, privacyAccepted,
+    } = parsed.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
 
     // Validate lecturer access code
     if (role === "LECTURER") {
-      if (!accessCode || typeof accessCode !== "string") {
+      if (!accessCode) {
         return NextResponse.json(
           { success: false, error: "Access code is required for lecturers" },
           { status: 400 }
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
     // Validate faculty/program exist for students
     if (role === "STUDENT" && facultyId) {
       const faculty = await prisma.faculty.findUnique({
-        where: { id: facultyId as string },
+        where: { id: facultyId },
       });
       if (!faculty) {
         return NextResponse.json(
@@ -92,9 +93,9 @@ export async function POST(request: Request) {
         password: hashedPassword,
         role,
         studentId: studentId || null,
-        facultyId: (role === "STUDENT" && facultyId ? facultyId : null) as string | null,
-        semester: role === "STUDENT" && semester ? Number(semester) : null,
-        programId: (role === "STUDENT" && programId ? programId : null) as string | null,
+        facultyId: role === "STUDENT" && facultyId ? facultyId : null,
+        semester: role === "STUDENT" && semester ? semester : null,
+        programId: role === "STUDENT" && programId ? programId : null,
         referralCode: userReferralCode,
         termsAccepted: termsAccepted === true,
         privacyAccepted: privacyAccepted === true,

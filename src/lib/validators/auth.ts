@@ -9,10 +9,15 @@ export const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["STUDENT", "LECTURER", "ADMIN"]),
+  role: z.enum(["STUDENT", "LECTURER"]),
   studentId: z.string().optional(),
   accessCode: z.string().optional(),
   referralCode: z.string().optional(),
+  facultyId: z.string().optional(),
+  semester: z.coerce.number().int().min(1).max(12).optional(),
+  programId: z.string().optional(),
+  termsAccepted: z.boolean().optional(),
+  privacyAccepted: z.boolean().optional(),
 });
 
 export const roleSetupSchema = z.object({
