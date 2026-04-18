@@ -7,9 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-manrope: var(--font-manrope);
+  --font-heading: var(--font-manrope);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,6 +48,98 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 }
+
+/* ── Scroll-triggered animation keyframes ─────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Base hidden state (before intersection fires) ────────────────── */
+.aos-fade-up,
+.aos-fade-left,
+.aos-fade-right,
+.aos-zoom-in {
+  opacity: 0;
+  will-change: transform, opacity;
+  /* display is intentionally NOT set here — the component sets display:block inline
+     so that block/flex containers inside work correctly at full width */
+}
+
+/* ── Visible state (JS adds .is-visible via IntersectionObserver) ─── */
+.aos-fade-up.is-visible {
+  animation: fadeInUp 1.2s ease-in-out forwards;
+}
+
+.aos-fade-left.is-visible {
+  animation: fadeInLeft 1.2s ease-in-out forwards;
+}
+
+.aos-fade-right.is-visible {
+  animation: fadeInRight 1.2s ease-in-out forwards;
+}
+
+.aos-zoom-in.is-visible {
+  animation: zoomIn 1.2s ease-in-out forwards;
+}
+
+/* Stagger delays for grids ─────────────────────────────────────────── */
+.aos-delay-100 { animation-delay: 0.10s; }
+.aos-delay-200 { animation-delay: 0.20s; }
+.aos-delay-300 { animation-delay: 0.30s; }
+.aos-delay-400 { animation-delay: 0.40s; }
+.aos-delay-500 { animation-delay: 0.50s; }
+.aos-delay-600 { animation-delay: 0.60s; }
+
+/* ── Landing page scroll/ticker animations ─────────────────────────── */
+@keyframes ticker        { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@keyframes scrollFwd     { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@keyframes scrollRev     { from { transform: translateX(-50%) } to { transform: translateX(0) } }
+@keyframes carouselSlide { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+
+.animate-ticker      { animation: ticker        20s linear infinite; }
+.animate-carousel    { animation: carouselSlide 28s linear infinite; }
+.animate-scroll-fwd  { animation: scrollFwd    30s linear infinite; }
+.animate-scroll-rev  { animation: scrollRev    30s linear infinite; }
 
 :root {
   --background: oklch(1 0 0);
@@ -126,6 +219,7 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
   }
 }
 

@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Upload, X, FileText, Image } from "lucide-react";
+import { Upload, X, FileText, Image, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +15,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { CONTENT_TYPE_LABELS } from "@/lib/constants";
-import { formatFileSize } from "@/lib/utils";
+import { formatFileSize, cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES: Record<string, string> = {
   "application/pdf": "PDF",
@@ -49,6 +62,8 @@ export function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [openFaculty, setOpenFaculty] = useState(false);
+  const [openProgram, setOpenProgram] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     module: "",
@@ -226,21 +241,54 @@ export function UploadForm() {
 
           <div className="space-y-2">
             <Label htmlFor="faculty">Faculty *</Label>
-            <Select
-              value={formData.facultyId}
-              onValueChange={(v) => updateField("facultyId", v)}
-            >
-              <SelectTrigger id="faculty">
-                <SelectValue placeholder="Select faculty" />
-              </SelectTrigger>
-              <SelectContent>
-                {faculties.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={openFaculty} onOpenChange={setOpenFaculty}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    id="faculty"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openFaculty}
+                    className="w-full justify-between"
+                  >
+                    <span className="truncate">
+                      {formData.facultyId
+                        ? faculties.find((f) => f.id === formData.facultyId)?.name
+                        : "Select faculty"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                  </Button>
+                }
+              />
+              <PopoverContent className="w-(--anchor-width) p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search faculty..." />
+                  <CommandList>
+                    <CommandEmpty>No faculty found.</CommandEmpty>
+                    <CommandGroup>
+                      {faculties.map((f) => (
+                        <CommandItem
+                          key={f.id}
+                          value={f.name}
+                          onSelect={() => {
+                            updateField("facultyId", f.id)
+                            setOpenFaculty(false)
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 size-4 shrink-0",
+                              formData.facultyId === f.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <span className="truncate">{f.name}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -265,22 +313,57 @@ export function UploadForm() {
 
             <div className="space-y-2">
               <Label htmlFor="program">Program</Label>
-              <Select
-                value={formData.programId}
-                onValueChange={(v) => updateField("programId", v)}
-                disabled={!formData.facultyId}
-              >
-                <SelectTrigger id="program">
-                  <SelectValue placeholder="Select program" />
-                </SelectTrigger>
-                <SelectContent>
-                  {programs.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openProgram} onOpenChange={setOpenProgram}>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      id="program"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openProgram}
+                      className="w-full justify-between"
+                      disabled={!formData.facultyId}
+                    >
+                      <span className="truncate">
+                        {!formData.facultyId
+                          ? "Select a faculty first"
+                          : formData.programId
+                          ? programs.find((p) => p.id === formData.programId)?.name
+                          : "Select program"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                    </Button>
+                  }
+                />
+                <PopoverContent className="w-(--anchor-width) p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search program..." />
+                    <CommandList>
+                      <CommandEmpty>No program found.</CommandEmpty>
+                      <CommandGroup>
+                        {programs.map((p) => (
+                          <CommandItem
+                            key={p.id}
+                            value={p.name}
+                            onSelect={() => {
+                              updateField("programId", p.id)
+                              setOpenProgram(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 size-4 shrink-0",
+                                formData.programId === p.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="truncate">{p.name}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
