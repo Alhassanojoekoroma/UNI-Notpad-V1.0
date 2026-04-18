@@ -116,6 +116,7 @@ export function ComposeDialog({ open, onOpenChange, replyTo }: ComposeDialogProp
             ) : (
               <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger
+                  nativeButton={false}
                   render={
                     <Input
                       placeholder="Search for a user..."
@@ -128,7 +129,7 @@ export function ComposeDialog({ open, onOpenChange, replyTo }: ComposeDialogProp
                     />
                   }
                 />
-                <PopoverContent className="p-0 w-[--radix-popover-trigger-width]" align="start">
+                <PopoverContent className="p-0 w-(--anchor-width)" align="start">
                   <Command>
                     <CommandList>
                       <CommandEmpty>No users found.</CommandEmpty>
