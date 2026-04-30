@@ -38,7 +38,14 @@ export function NotificationBell() {
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="ghost" size="icon" className="relative size-8" />}>
+      <PopoverTrigger
+        render={
+          <button
+            className="relative shrink-0 inline-flex items-center justify-center rounded-md h-9 w-9 hover:bg-accent hover:text-accent-foreground"
+            type="button"
+          />
+        }
+      >
         <Bell className="size-4" />
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">

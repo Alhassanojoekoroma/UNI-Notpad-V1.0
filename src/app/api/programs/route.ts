@@ -31,8 +31,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, data: programs });
   } catch (error) {
     console.error("Programs fetch error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : "";
+    console.error("Full error details:", { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: "Internal server error", details: errorMessage },
       { status: 500 }
     );
   }

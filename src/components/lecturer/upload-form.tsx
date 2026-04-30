@@ -76,26 +76,29 @@ export function UploadForm() {
     tutorialLink: "",
   });
 
-  const { data: facultiesData } = useQuery({
+  const { data: facultiesData, isLoading: isLoadingFaculties, error: facultiesError } = useQuery({
     queryKey: ["faculties"],
     queryFn: async () => {
       const res = await fetch("/api/faculties");
+      if (!res.ok) throw new Error("Failed to load faculties");
       return res.json();
     },
   });
 
-  const { data: settingsData } = useQuery({
+  const { data: settingsData, isLoading: isLoadingSettings } = useQuery({
     queryKey: ["app-settings-semesters"],
     queryFn: async () => {
       const res = await fetch("/api/settings/public");
+      if (!res.ok) throw new Error("Failed to load settings");
       return res.json();
     },
   });
 
-  const { data: programsData } = useQuery({
+  const { data: programsData, isLoading: isLoadingPrograms, error: programsError } = useQuery({
     queryKey: ["programs", formData.facultyId],
     queryFn: async () => {
       const res = await fetch(`/api/programs?facultyId=${formData.facultyId}`);
+      if (!res.ok) throw new Error("Failed to load programs");
       return res.json();
     },
     enabled: !!formData.facultyId,
@@ -241,6 +244,9 @@ export function UploadForm() {
 
           <div className="space-y-2">
             <Label htmlFor="faculty">Faculty *</Label>
+            {facultiesError && (
+              <p className="text-sm text-destructive">Failed to load faculties. Please refresh the page.</p>
+            )}
             <Popover open={openFaculty} onOpenChange={setOpenFaculty}>
               <PopoverTrigger
                 render={
@@ -250,41 +256,55 @@ export function UploadForm() {
                     role="combobox"
                     aria-expanded={openFaculty}
                     className="w-full justify-between"
+                    disabled={isLoadingFaculties}
                   >
                     <span className="truncate">
-                      {formData.facultyId
-                        ? faculties.find((f) => f.id === formData.facultyId)?.name
-                        : "Select faculty"}
+                      {isLoadingFaculties ? (
+                        <span className="flex items-center gap-2">
+                          <Spinner className="size-4" />
+                          Loading faculties...
+                        </span>
+                      ) : formData.facultyId ? (
+                        faculties.find((f) => f.id === formData.facultyId)?.name
+                      ) : (
+                        "Select faculty"
+                      )}
                     </span>
                     <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                   </Button>
                 }
               />
-              <PopoverContent className="w-(--anchor-width) p-0" align="start">
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                 <Command>
                   <CommandInput placeholder="Search faculty..." />
                   <CommandList>
-                    <CommandEmpty>No faculty found.</CommandEmpty>
-                    <CommandGroup>
-                      {faculties.map((f) => (
-                        <CommandItem
-                          key={f.id}
-                          value={f.name}
-                          onSelect={() => {
-                            updateField("facultyId", f.id)
-                            setOpenFaculty(false)
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 size-4 shrink-0",
-                              formData.facultyId === f.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <span className="truncate">{f.name}</span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
+                    {faculties.length === 0 && (
+                      <CommandEmpty>
+                        {isLoadingFaculties ? "Loading faculties..." : "No faculty found."}
+                      </CommandEmpty>
+                    )}
+                    {faculties.length > 0 && (
+                      <CommandGroup>
+                        {faculties.map((f) => (
+                          <CommandItem
+                            key={f.id}
+                            value={f.name}
+                            onSelect={() => {
+                              updateField("facultyId", f.id)
+                              setOpenFaculty(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 size-4 shrink-0",
+                                formData.facultyId === f.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="truncate">{f.name}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
                   </CommandList>
                 </Command>
               </PopoverContent>
@@ -297,9 +317,10 @@ export function UploadForm() {
               <Select
                 value={formData.semester}
                 onValueChange={(v) => updateField("semester", v)}
+                disabled={isLoadingSettings}
               >
                 <SelectTrigger id="semester">
-                  <SelectValue placeholder="Select semester" />
+                  <SelectValue placeholder={isLoadingSettings ? "Loading semesters..." : "Select semester"} />
                 </SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: maxSemesters }, (_, i) => (
@@ -313,7 +334,10 @@ export function UploadForm() {
 
             <div className="space-y-2">
               <Label htmlFor="program">Program</Label>
-              <Popover open={openProgram} onOpenChange={setOpenProgram}>
+              {formData.facultyId && programsError && (
+                <p className="text-sm text-destructive">Failed to load programs. Please try again.</p>
+              )}
+              <Popover open={openProgram && !!formData.facultyId} onOpenChange={setOpenProgram}>
                 <PopoverTrigger
                   render={
                     <Button
@@ -322,47 +346,62 @@ export function UploadForm() {
                       role="combobox"
                       aria-expanded={openProgram}
                       className="w-full justify-between"
-                      disabled={!formData.facultyId}
+                      disabled={!formData.facultyId || isLoadingPrograms}
                     >
                       <span className="truncate">
                         {!formData.facultyId
                           ? "Select a faculty first"
+                          : isLoadingPrograms
+                          ? (
+                            <span className="flex items-center gap-2">
+                              <Spinner className="size-4" />
+                              Loading programs...
+                            </span>
+                          )
                           : formData.programId
                           ? programs.find((p) => p.id === formData.programId)?.name
-                          : "Select program"}
+                          : "Select program (optional)"}
                       </span>
                       <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                     </Button>
                   }
                 />
-                <PopoverContent className="w-(--anchor-width) p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search program..." />
-                    <CommandList>
-                      <CommandEmpty>No program found.</CommandEmpty>
-                      <CommandGroup>
-                        {programs.map((p) => (
-                          <CommandItem
-                            key={p.id}
-                            value={p.name}
-                            onSelect={() => {
-                              updateField("programId", p.id)
-                              setOpenProgram(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 size-4 shrink-0",
-                                formData.programId === p.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <span className="truncate">{p.name}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
+                {formData.facultyId && (
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search program..." />
+                      <CommandList>
+                        {programs.length === 0 && (
+                          <CommandEmpty>
+                            {isLoadingPrograms ? "Loading programs..." : "No program found."}
+                          </CommandEmpty>
+                        )}
+                        {programs.length > 0 && (
+                          <CommandGroup>
+                            {programs.map((p) => (
+                              <CommandItem
+                                key={p.id}
+                                value={p.name}
+                                onSelect={() => {
+                                  updateField("programId", p.id)
+                                  setOpenProgram(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 size-4 shrink-0",
+                                    formData.programId === p.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="truncate">{p.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                )}
               </Popover>
             </div>
           </div>

@@ -116,7 +116,6 @@ export function ComposeDialog({ open, onOpenChange, replyTo }: ComposeDialogProp
             ) : (
               <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger
-                  nativeButton={false}
                   render={
                     <Input
                       placeholder="Search for a user..."

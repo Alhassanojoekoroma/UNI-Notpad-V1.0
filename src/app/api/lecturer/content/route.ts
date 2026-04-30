@@ -219,8 +219,11 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Content upload error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : "";
+    console.error("Full error details:", { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: "Internal server error", details: errorMessage },
       { status: 500 }
     );
   }

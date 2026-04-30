@@ -41,11 +41,15 @@ export function ChatSettingsPopover({ settings, onChange }: ChatSettingsProps) {
     <Popover>
       <PopoverTrigger
         render={
-          <Button variant="ghost" size="icon" aria-label="Chat settings">
-            <Settings2 className="size-4" />
-          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Chat settings"
+          />
         }
-      />
+      >
+        <Settings2 className="size-4" />
+      </PopoverTrigger>
       <PopoverContent align="end" className="w-80">
         <PopoverHeader>
           <PopoverTitle>Chat Settings</PopoverTitle>
