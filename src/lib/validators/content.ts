@@ -1,10 +1,11 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const contentUploadSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   facultyId: z.string().min(1),
   semester: z.number().int().min(1),
+  week: z.number().int().min(1).max(8).default(1),
   programId: z.string().optional(),
   module: z.string().min(1, "Module is required"),
   moduleCode: z.string().optional(),

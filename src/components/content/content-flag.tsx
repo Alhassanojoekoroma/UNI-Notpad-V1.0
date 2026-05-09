@@ -53,9 +53,11 @@ export function ContentFlag({ contentId }: { contentId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="ghost" size="sm" />}>
-        <Flag className="mr-2 size-4" />
-        Report
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <Flag className="mr-2 size-4" />
+          Report
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

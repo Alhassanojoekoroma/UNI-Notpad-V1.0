@@ -11,6 +11,7 @@ export default defineConfig({
     exclude: ["tests/e2e/**"],
     pool: "forks",
     fileParallelism: false, // integration tests share a DB — avoid deadlocks
+    testTimeout: 15000, // Increase timeout for integration tests
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],

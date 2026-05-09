@@ -291,8 +291,10 @@ function AcademicStructure({ faculties, queryClient }: { faculties: Faculty[]; q
               </div>
               <div className="flex gap-1">
                 <Dialog open={newProgramDialog === faculty.id} onOpenChange={(open) => setNewProgramDialog(open ? faculty.id : null)}>
-                  <DialogTrigger render={<Button variant="ghost" size="sm" />}>
-                    <Plus className="size-3 mr-1" /> Program
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <Plus className="size-3 mr-1" /> Program
+                    </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>

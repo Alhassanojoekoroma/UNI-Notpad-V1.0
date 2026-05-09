@@ -48,9 +48,11 @@ export function CreatePostDialog({ module, facultyId }: CreatePostDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>
-        <Plus className="size-4 mr-2" />
-        New Post
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="size-4 mr-2" />
+          New Post
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

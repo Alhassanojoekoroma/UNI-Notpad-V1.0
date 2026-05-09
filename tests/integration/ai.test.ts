@@ -52,9 +52,11 @@ async function seedUser(overrides: Record<string, unknown> = {}) {
 
 describe("AI rate limiting flow", () => {
   it("should track free query depletion and token-based fallback", async () => {
-    // 1. Create AppSettings with low free query limit
-    await testPrisma.appSettings.create({
-      data: createTestAppSettings({ freeQueriesPerDay: 3 }),
+    // 1. Create or update AppSettings with low free query limit
+    await testPrisma.appSettings.upsert({
+      where: { id: "default" },
+      create: createTestAppSettings({ freeQueriesPerDay: 3 }),
+      update: { freeQueriesPerDay: 3 },
     });
 
     // 2. Create user with 1 free query remaining
@@ -111,8 +113,10 @@ describe("AI rate limiting flow", () => {
   });
 
   it("should reset free queries after cooldown period", async () => {
-    await testPrisma.appSettings.create({
-      data: createTestAppSettings({ freeQueriesPerDay: 3 }),
+    await testPrisma.appSettings.upsert({
+      where: { id: "default" },
+      create: createTestAppSettings({ freeQueriesPerDay: 3 }),
+      update: { freeQueriesPerDay: 3 },
     });
 
     // User whose reset time has passed

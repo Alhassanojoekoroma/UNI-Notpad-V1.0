@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Content" ADD COLUMN     "week" INTEGER NOT NULL DEFAULT 1;

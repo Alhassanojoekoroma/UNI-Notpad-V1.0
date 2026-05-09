@@ -113,6 +113,7 @@ export async function POST(request: Request) {
       description: (formData.get("description") as string) || undefined,
       facultyId: formData.get("facultyId") as string,
       semester: Number(formData.get("semester")),
+      week: Number(formData.get("week")) || 1,
       programId: (formData.get("programId") as string) || undefined,
       module: formData.get("module") as string,
       moduleCode: (formData.get("moduleCode") as string) || undefined,
@@ -129,14 +130,22 @@ export async function POST(request: Request) {
     }
 
     // Validate lecturer has authority over the target faculty
-    if (session.user.facultyId && parsed.data.facultyId !== session.user.facultyId) {
+    // Lecturers must have a facultyId and can only upload to their assigned faculty
+    if (!session.user.facultyId) {
+      return NextResponse.json(
+        { success: false, error: "Your account is not assigned to any faculty. Please contact your administrator." },
+        { status: 403 }
+      );
+    }
+    
+    if (parsed.data.facultyId !== session.user.facultyId) {
       return NextResponse.json(
         { success: false, error: "You can only upload content to your assigned faculty" },
         { status: 403 }
       );
     }
 
-    // Upload file to Cloudinary
+    // Upload file to Cloudinary with better error handling
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
@@ -144,17 +153,30 @@ export async function POST(request: Request) {
       secure_url: string;
       public_id: string;
     }>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
+      const upload_stream = cloudinary.uploader.upload_stream(
         {
           resource_type: "auto",
           folder: "content",
+          timeout: 60000, // 60 second timeout
         },
         (error, result) => {
-          if (error || !result) reject(error ?? new Error("Upload failed"));
-          else resolve(result);
+          if (error) {
+            reject(new Error(`Cloudinary upload failed: ${error.message}`));
+          } else if (!result) {
+            reject(new Error("Cloudinary returned no result"));
+          } else {
+            resolve(result);
+          }
         }
       );
-      stream.end(buffer);
+      
+      // Handle stream errors
+      upload_stream.on("error", (err) => {
+        reject(new Error(`Upload stream error: ${err.message}`));
+      });
+      
+      // Write buffer to stream
+      upload_stream.end(buffer);
     });
 
     // Derive file type extension
@@ -178,6 +200,7 @@ export async function POST(request: Request) {
         fileSize: file.size,
         facultyId: parsed.data.facultyId,
         semester: parsed.data.semester,
+        week: parsed.data.week,
         programId: parsed.data.programId,
         module: parsed.data.module,
         moduleCode: parsed.data.moduleCode,
@@ -187,13 +210,15 @@ export async function POST(request: Request) {
       },
     });
 
-    // Notify students in matching faculty/semester
+    // Notify active students in matching faculty/semester (exclude suspended/deleted)
     const students = await prisma.user.findMany({
       where: {
         role: "STUDENT",
         facultyId: parsed.data.facultyId,
         semester: parsed.data.semester,
         deletedAt: null,
+        isSuspended: false,
+        isActive: true,
       },
       select: { id: true },
     });

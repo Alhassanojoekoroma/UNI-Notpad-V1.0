@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth";
 import { SetupWizard } from "@/components/admin/setup-wizard";
 import { RoleSetupForm } from "@/components/auth/role-setup-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function SetupPage() {
   const settings = await prisma.appSettings.findUnique({
     where: { id: "default" },

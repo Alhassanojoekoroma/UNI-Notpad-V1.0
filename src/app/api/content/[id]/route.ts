@@ -37,17 +37,28 @@ export async function GET(
       );
     }
 
-    // Verify faculty/semester match for students
-    if (
-      session.user.role === "STUDENT" &&
-      (content.facultyId !== session.user.facultyId ||
-        content.semester !== session.user.semester)
-    ) {
-      return NextResponse.json(
-        { success: false, error: "Access denied" },
-        { status: 403 }
-      );
+    // Role-based access control
+    if (session.user.role === "STUDENT") {
+      // Students can only view content from their faculty and semester
+      if (
+        content.facultyId !== session.user.facultyId ||
+        content.semester !== session.user.semester
+      ) {
+        return NextResponse.json(
+          { success: false, error: "Access denied" },
+          { status: 403 }
+        );
+      }
+    } else if (session.user.role === "LECTURER") {
+      // Lecturers can only view content from their assigned faculty
+      if (content.facultyId !== session.user.facultyId) {
+        return NextResponse.json(
+          { success: false, error: "Access denied" },
+          { status: 403 }
+        );
+      }
     }
+    // Admins can view all content (no restrictions)
 
     return NextResponse.json({ success: true, data: content });
   } catch (error) {

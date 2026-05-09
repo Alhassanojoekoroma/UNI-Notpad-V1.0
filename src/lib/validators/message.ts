@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const sendMessageSchema = z.object({
   recipientId: z.string().min(1, "Recipient is required"),

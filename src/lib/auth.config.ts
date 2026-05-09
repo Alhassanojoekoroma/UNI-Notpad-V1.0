@@ -5,6 +5,7 @@ import type { UserRole } from "@prisma/client";
 const SESSION_REVALIDATE_MS = 5 * 60 * 1000;
 
 export const authConfig: NextAuthConfig = {
+  basePath: "/api/auth",
   pages: {
     signIn: "/login",
     newUser: "/register",

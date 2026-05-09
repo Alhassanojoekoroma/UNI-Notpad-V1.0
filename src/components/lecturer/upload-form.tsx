@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Upload, X, FileText, Image, Check, ChevronsUpDown } from "lucide-react";
+import { Upload, X, FileText, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,20 +30,20 @@ import {
 } from "@/components/ui/command";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CONTENT_TYPE_LABELS } from "@/lib/constants";
 import { formatFileSize, cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES: Record<string, string> = {
   "application/pdf": "PDF",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-    "PPTX",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-    "DOCX",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PPTX",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
   "image/jpeg": "JPEG",
   "image/png": "PNG",
 };
 
 const MAX_SIZE = 50 * 1024 * 1024;
+const MAX_FILES = 10;
 
 interface Faculty {
   id: string;
@@ -59,21 +59,22 @@ interface Program {
 
 export function UploadForm() {
   const router = useRouter();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [openFaculty, setOpenFaculty] = useState(false);
   const [openProgram, setOpenProgram] = useState(false);
+  const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     module: "",
     moduleCode: "",
     facultyId: "",
-    semester: "",
     programId: "",
     contentType: "",
     description: "",
     tutorialLink: "",
+    week: "1",
   });
 
   const { data: facultiesData, isLoading: isLoadingFaculties, error: facultiesError } = useQuery({
@@ -104,24 +105,29 @@ export function UploadForm() {
     enabled: !!formData.facultyId,
   });
 
-  const faculties: Faculty[] = facultiesData?.data ?? [];
-  const programs: Program[] = programsData?.data ?? [];
-  const maxSemesters: number = settingsData?.data?.maxSemesters ?? 8;
-
   const upload = useMutation({
-    mutationFn: async (data: FormData) => {
-      const res = await fetch("/api/lecturer/content", {
-        method: "POST",
-        body: data,
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error);
-      return json.data;
+    mutationFn: async (uploadData: FormData[]) => {
+      const results = [];
+      for (const data of uploadData) {
+        const res = await fetch("/api/lecturer/content", {
+          method: "POST",
+          body: data,
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        results.push(json.data);
+      }
+      return results;
     },
     onSuccess: () => {
-      router.push("/content");
+      router.push("/lecturer/content");
+      router.refresh();
     },
   });
+
+  const faculties = facultiesData?.data || [];
+  const programs = programsData?.data || [];
+  const maxSemesters = settingsData?.data?.maxSemesters || 8;
 
   const validateFile = useCallback((f: File): string | null => {
     if (!ACCEPTED_TYPES[f.type]) {
@@ -134,95 +140,146 @@ export function UploadForm() {
   }, []);
 
   const handleFileDrop = useCallback(
-    (e: React.DragEvent) => {
+    (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       setDragOver(false);
-      const dropped = e.dataTransfer.files[0];
-      if (!dropped) return;
-      const error = validateFile(dropped);
-      if (error) {
-        setFileError(error);
-        return;
-      }
-      setFileError(null);
-      setFile(dropped);
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      handleFileAddition(droppedFiles);
     },
-    [validateFile]
+    []
   );
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selected = e.target.files?.[0];
-      if (!selected) return;
-      const error = validateFile(selected);
-      if (error) {
-        setFileError(error);
-        return;
-      }
-      setFileError(null);
-      setFile(selected);
+      const selectedFiles = Array.from(e.target.files || []);
+      handleFileAddition(selectedFiles);
     },
-    [validateFile]
+    []
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
+  const handleFileAddition = (newFiles: File[]) => {
+    const totalFiles = files.length + newFiles.length;
+    if (totalFiles > MAX_FILES) {
+      setFileError(`Maximum ${MAX_FILES} files allowed. You have ${files.length} selected.`);
+      return;
+    }
 
-    const data = new FormData();
-    data.append("file", file);
-    data.append("title", formData.title);
-    data.append("module", formData.module);
-    data.append("facultyId", formData.facultyId);
-    data.append("semester", formData.semester);
-    data.append("contentType", formData.contentType);
+    const validFiles: File[] = [];
+    let error: string | null = null;
 
-    if (formData.moduleCode) data.append("moduleCode", formData.moduleCode);
-    if (formData.programId) data.append("programId", formData.programId);
-    if (formData.description) data.append("description", formData.description);
-    if (formData.tutorialLink)
-      data.append("tutorialLink", formData.tutorialLink);
+    for (const f of newFiles) {
+      const fileError = validateFile(f);
+      if (fileError) {
+        error = fileError;
+        continue;
+      }
+      validFiles.push(f);
+    }
 
-    upload.mutate(data);
-  };
-
-  const updateField = (field: string, value: string | null) => {
-    if (value === null) return;
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (field === "facultyId") {
-      setFormData((prev) => ({ ...prev, programId: "" }));
+    if (validFiles.length > 0) {
+      setFiles((prev) => [...prev, ...validFiles]);
+      setFileError(null);
+    } else if (error) {
+      setFileError(error);
     }
   };
 
-  const isValid =
-    formData.title &&
-    formData.module &&
-    formData.facultyId &&
-    formData.semester &&
-    formData.contentType &&
-    file;
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  const FileIcon = file?.type.startsWith("image/") ? Image : FileText;
+  const toggleSemester = (semester: string) => {
+    setSelectedSemesters((prev) =>
+      prev.includes(semester)
+        ? prev.filter((s) => s !== semester)
+        : [...prev, semester]
+    );
+  };
+
+  const updateField = (key: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!formData.title.trim()) {
+      alert("Please enter a title");
+      return;
+    }
+    if (!formData.module.trim()) {
+      alert("Please enter a module/course name");
+      return;
+    }
+    if (!formData.facultyId) {
+      alert("Please select a faculty");
+      return;
+    }
+    if (selectedSemesters.length === 0) {
+      alert("Please select at least one semester");
+      return;
+    }
+    if (files.length === 0) {
+      alert("Please upload at least one file");
+      return;
+    }
+    if (!formData.contentType) {
+      alert("Please select content type");
+      return;
+    }
+
+    // Create FormData for each file and each semester combination
+    const formDataArray: FormData[] = [];
+    
+    for (const file of files) {
+      for (const semester of selectedSemesters) {
+        const data = new FormData();
+        data.append("title", formData.title);
+        data.append("module", formData.module);
+        data.append("moduleCode", formData.moduleCode);
+        data.append("facultyId", formData.facultyId);
+        data.append("programId", formData.programId);
+        data.append("semester", semester);
+        data.append("week", formData.week);
+        data.append("contentType", formData.contentType);
+        data.append("description", formData.description);
+        data.append("tutorialLink", formData.tutorialLink);
+        data.append("file", file);
+        formDataArray.push(data);
+      }
+    }
+
+    upload.mutate(formDataArray);
+  };
+
+  const isValid =
+    formData.title.trim() &&
+    formData.module.trim() &&
+    formData.facultyId &&
+    selectedSemesters.length > 0 &&
+    files.length > 0 &&
+    formData.contentType;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Left column: Metadata */}
-        <div className="space-y-4">
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left column: Form fields */}
+        <div className="space-y-4 lg:col-span-2">
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => updateField("title", e.target.value)}
-              placeholder="e.g. Introduction to Data Structures"
+              placeholder="e.g. Introduction to Database"
               required
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="module">Module / Course Name *</Label>
+              <Label htmlFor="module">Module/Course Name *</Label>
               <Input
                 id="module"
                 value={formData.module}
@@ -249,31 +306,23 @@ export function UploadForm() {
             )}
             <Popover open={openFaculty} onOpenChange={setOpenFaculty}>
               <PopoverTrigger
-                render={
-                  <Button
-                    id="faculty"
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openFaculty}
-                    className="w-full justify-between"
-                    disabled={isLoadingFaculties}
-                  >
-                    <span className="truncate">
-                      {isLoadingFaculties ? (
-                        <span className="flex items-center gap-2">
-                          <Spinner className="size-4" />
-                          Loading faculties...
-                        </span>
-                      ) : formData.facultyId ? (
-                        faculties.find((f) => f.id === formData.facultyId)?.name
-                      ) : (
-                        "Select faculty"
-                      )}
+                className="w-full h-10 px-3 py-2 text-left rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground flex justify-between items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoadingFaculties}
+              >
+                <span className="truncate text-sm">
+                  {isLoadingFaculties ? (
+                    <span className="flex items-center gap-2">
+                      <Spinner className="size-4" />
+                      Loading faculties...
                     </span>
-                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                  </Button>
-                }
-              />
+                  ) : formData.facultyId ? (
+                    faculties.find((f: Faculty) => f.id === formData.facultyId)?.name
+                  ) : (
+                    "Select faculty"
+                  )}
+                </span>
+                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+              </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                 <Command>
                   <CommandInput placeholder="Search faculty..." />
@@ -285,13 +334,13 @@ export function UploadForm() {
                     )}
                     {faculties.length > 0 && (
                       <CommandGroup>
-                        {faculties.map((f) => (
+                        {faculties.map((f: Faculty) => (
                           <CommandItem
                             key={f.id}
                             value={f.name}
                             onSelect={() => {
-                              updateField("facultyId", f.id)
-                              setOpenFaculty(false)
+                              updateField("facultyId", f.id);
+                              setOpenFaculty(false);
                             }}
                           >
                             <Check
@@ -311,113 +360,131 @@ export function UploadForm() {
             </Popover>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="semester">Semester *</Label>
-              <Select
-                value={formData.semester}
-                onValueChange={(v) => updateField("semester", v)}
-                disabled={isLoadingSettings}
-              >
-                <SelectTrigger id="semester">
-                  <SelectValue placeholder={isLoadingSettings ? "Loading semesters..." : "Select semester"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: maxSemesters }, (_, i) => (
-                    <SelectItem key={i + 1} value={String(i + 1)}>
-                      Semester {i + 1}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="program">Program</Label>
-              {formData.facultyId && programsError && (
-                <p className="text-sm text-destructive">Failed to load programs. Please try again.</p>
-              )}
-              <Popover open={openProgram && !!formData.facultyId} onOpenChange={setOpenProgram}>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      id="program"
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openProgram}
-                      className="w-full justify-between"
-                      disabled={!formData.facultyId || isLoadingPrograms}
+          <div className="space-y-3">
+            <Label>Semesters * (Select at least one)</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 border rounded-lg bg-muted/30">
+              {Array.from({ length: maxSemesters }, (_, i) => {
+                const semValue = String(i + 1);
+                return (
+                  <div key={semValue} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`sem-${semValue}`}
+                      checked={selectedSemesters.includes(semValue)}
+                      onCheckedChange={() => toggleSemester(semValue)}
+                    />
+                    <label
+                      htmlFor={`sem-${semValue}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                     >
-                      <span className="truncate">
-                        {!formData.facultyId
-                          ? "Select a faculty first"
-                          : isLoadingPrograms
-                          ? (
-                            <span className="flex items-center gap-2">
-                              <Spinner className="size-4" />
-                              Loading programs...
-                            </span>
-                          )
-                          : formData.programId
-                          ? programs.find((p) => p.id === formData.programId)?.name
-                          : "Select program (optional)"}
-                      </span>
-                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                    </Button>
-                  }
-                />
-                {formData.facultyId && (
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search program..." />
-                      <CommandList>
-                        {programs.length === 0 && (
-                          <CommandEmpty>
-                            {isLoadingPrograms ? "Loading programs..." : "No program found."}
-                          </CommandEmpty>
-                        )}
-                        {programs.length > 0 && (
-                          <CommandGroup>
-                            {programs.map((p) => (
-                              <CommandItem
-                                key={p.id}
-                                value={p.name}
-                                onSelect={() => {
-                                  updateField("programId", p.id)
-                                  setOpenProgram(false)
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 size-4 shrink-0",
-                                    formData.programId === p.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <span className="truncate">{p.name}</span>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                )}
-              </Popover>
+                      Sem {i + 1}
+                    </label>
+                  </div>
+                );
+              })}
             </div>
+            {selectedSemesters.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Selected: {selectedSemesters.join(", ")}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="week">Week Number *</Label>
+            <Select value={formData.week || ""} onValueChange={(v) => updateField("week", v || "")}>
+              <SelectTrigger id="week">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 8 }, (_, i) => {
+                  const weekNum = String(i + 1);
+                  return (
+                    <SelectItem key={weekNum} value={weekNum}>
+                      Week {weekNum}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="program">Program</Label>
+            {formData.facultyId && programsError && (
+              <p className="text-sm text-destructive">Failed to load programs. Please try again.</p>
+            )}
+            <Popover open={openProgram && !!formData.facultyId} onOpenChange={setOpenProgram}>
+              <PopoverTrigger
+                className="w-full h-10 px-3 py-2 text-left rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground flex justify-between items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!formData.facultyId || isLoadingPrograms}
+              >
+                <span className="truncate text-sm">
+                  {!formData.facultyId
+                    ? "Select a faculty first"
+                    : isLoadingPrograms
+                    ? (
+                      <span className="flex items-center gap-2">
+                        <Spinner className="size-4" />
+                        Loading programs...
+                      </span>
+                    )
+                    : formData.programId
+                    ? programs.find((p: Program) => p.id === formData.programId)?.name
+                    : "Select program (optional)"}
+                </span>
+                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+              </PopoverTrigger>
+              {formData.facultyId && (
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search program..." />
+                    <CommandList>
+                      {programs.length === 0 && (
+                        <CommandEmpty>
+                          {isLoadingPrograms ? "Loading programs..." : "No program found."}
+                        </CommandEmpty>
+                      )}
+                      {programs.length > 0 && (
+                        <CommandGroup>
+                          {programs.map((p: Program) => (
+                            <CommandItem
+                              key={p.id}
+                              value={p.name}
+                              onSelect={() => {
+                                updateField("programId", p.id);
+                                setOpenProgram(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 size-4 shrink-0",
+                                  formData.programId === p.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span className="truncate">{p.name}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              )}
+            </Popover>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="contentType">Content Type *</Label>
             <Select
-              value={formData.contentType}
-              onValueChange={(v) => updateField("contentType", v)}
+              value={formData.contentType || ""}
+              onValueChange={(v) => updateField("contentType", v || "")}
             >
               <SelectTrigger id="contentType">
                 <SelectValue placeholder="Select content type" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(CONTENT_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
+                {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
                     {label}
                   </SelectItem>
                 ))}
@@ -426,9 +493,7 @@ export function UploadForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">
-              Description ({formData.description.length}/500)
-            </Label>
+            <Label htmlFor="description">Description ({formData.description.length}/500)</Label>
             <Textarea
               id="description"
               value={formData.description}
@@ -456,10 +521,10 @@ export function UploadForm() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Upload File *</CardTitle>
+              <CardTitle className="text-base">Upload Files * (Max {MAX_FILES})</CardTitle>
             </CardHeader>
             <CardContent>
-              {!file ? (
+              {files.length < MAX_FILES && (
                 <div
                   className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
                     dragOver
@@ -475,10 +540,10 @@ export function UploadForm() {
                 >
                   <Upload className="mb-3 size-10 text-muted-foreground" />
                   <p className="mb-1 text-sm font-medium">
-                    Drag and drop your file here
+                    Drag and drop files here
                   </p>
                   <p className="mb-3 text-xs text-muted-foreground">
-                    PDF, PPTX, DOCX, JPEG, or PNG (max 50MB)
+                    PDF, PPTX, DOCX, JPEG, PNG (max 50MB each)
                   </p>
                   <Button
                     type="button"
@@ -494,33 +559,67 @@ export function UploadForm() {
                     id="file-input"
                     type="file"
                     className="sr-only"
+                    multiple
                     accept=".pdf,.pptx,.docx,.jpeg,.jpg,.png"
                     onChange={handleFileSelect}
                   />
                 </div>
-              ) : (
-                <div className="flex items-center gap-3 rounded-lg border p-4">
-                  <FileIcon className="size-8 shrink-0 text-primary" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ACCEPTED_TYPES[file.type]} &middot;{" "}
-                      {formatFileSize(file.size)}
-                    </p>
+              )}
+
+              {/* File list */}
+              {files.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">
+                    Selected files: {files.length}/{MAX_FILES}
+                  </p>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {files.map((file, index) => (
+                      <div key={`${file.name}-${index}`} className="flex items-center gap-3 rounded-lg border p-3 bg-muted/30">
+                        <FileText className="size-5 shrink-0 text-primary" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {ACCEPTED_TYPES[file.type]} · {formatFileSize(file.size)}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="shrink-0"
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setFile(null);
-                      setFileError(null);
-                    }}
-                  >
-                    <X className="size-4" />
-                  </Button>
+
+                  {files.length < MAX_FILES && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() =>
+                        document.getElementById("file-input-2")?.click()
+                      }
+                    >
+                      <Upload className="mr-2 size-4" />
+                      Add More Files
+                    </Button>
+                  )}
+                  <input
+                    id="file-input-2"
+                    type="file"
+                    className="sr-only"
+                    multiple
+                    accept=".pdf,.pptx,.docx,.jpeg,.jpg,.png"
+                    onChange={handleFileSelect}
+                  />
                 </div>
               )}
+
               {fileError && (
                 <p className="mt-2 text-sm text-destructive">{fileError}</p>
               )}
@@ -547,12 +646,12 @@ export function UploadForm() {
           {upload.isPending ? (
             <>
               <Spinner className="mr-2 size-4" />
-              Uploading...
+              Uploading {files.length} file{files.length !== 1 ? 's' : ''} to {selectedSemesters.length} semester{selectedSemesters.length !== 1 ? 's' : ''}...
             </>
           ) : (
             <>
               <Upload className="mr-2 size-4" />
-              Upload Content
+              Upload ({files.length} × {selectedSemesters.length} = {files.length * selectedSemesters.length} total)
             </>
           )}
         </Button>

@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const userUpdateSchema = z.object({
   role: z.enum(["STUDENT", "LECTURER", "ADMIN"]).optional(),

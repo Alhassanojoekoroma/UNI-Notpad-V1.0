@@ -95,37 +95,48 @@ export default async function ContentViewPage({
       </div>
 
       <div className="flex gap-2">
-        <Button render={<a href={content.fileUrl} download target="_blank" rel="noopener" />}>
-          <Download className="mr-2 size-4" />
-          Download
-        </Button>
-        {content.tutorialLink && (
-          <Button variant="outline" render={<a href={content.tutorialLink} target="_blank" rel="noopener noreferrer" />}>
-            <ExternalLink className="mr-2 size-4" />
-            Tutorial
+        <a href={content.fileUrl} download target="_blank" rel="noopener">
+          <Button className="w-full">
+            <Download className="mr-2 size-4" />
+            Download
           </Button>
+        </a>
+        {content.tutorialLink && (
+          <a href={content.tutorialLink} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" className="w-full">
+              <ExternalLink className="mr-2 size-4" />
+              Tutorial
+            </Button>
+          </a>
         )}
       </div>
 
       <Separator />
 
-      {/* Viewer */}
+      {/* Viewer - Safe URL handling */}
       {content.fileType === "pdf" && (
         <PdfViewer url={content.fileUrl} title={content.title} />
       )}
       {content.fileType === "pptx" && (
-        <iframe
-          src={`https://docs.google.com/gview?url=${encodeURIComponent(content.fileUrl)}&embedded=true`}
-          className="w-full min-h-[600px] rounded-lg border"
-          title={content.title}
-        />
+        <div className="rounded-lg border bg-muted p-6 text-center">
+          <p className="text-sm text-muted-foreground mb-3">PowerPoint file detected</p>
+          <a href={content.fileUrl} download>
+            <Button>
+              <Download className="mr-2 size-4" />
+              Download PPTX to view
+            </Button>
+          </a>
+        </div>
       )}
       {(content.fileType === "jpeg" || content.fileType === "png") && (
-        <img
-          src={content.fileUrl}
-          alt={content.title}
-          className="max-w-full rounded-lg border"
-        />
+        <div className="rounded-lg border overflow-hidden">
+          <img
+            src={content.fileUrl}
+            alt={content.title}
+            className="w-full"
+            loading="lazy"
+          />
+        </div>
       )}
 
       <Separator />

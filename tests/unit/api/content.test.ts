@@ -253,8 +253,12 @@ describe("POST /api/content/[id]/access", () => {
   it("records view access", async () => {
     const { prisma } = await import("@/lib/prisma");
     const mockPrisma = prisma as any;
-    mockPrisma.contentAccess.create.mockResolvedValueOnce({});
-    mockPrisma.content.update.mockResolvedValueOnce({});
+    mockPrisma.content.findUnique.mockResolvedValueOnce({
+      facultyId: "test-faculty-id",
+      semester: 1,
+    });
+    mockPrisma.contentAccess.findFirst.mockResolvedValueOnce(null);
+    mockPrisma.$transaction.mockResolvedValueOnce([{}, {}]);
 
     const { POST } = await import("@/app/api/content/[id]/access/route");
     const request = createMockRequest("POST", `${BASE_URL}/api/content/content-1/access`, {
@@ -271,8 +275,12 @@ describe("POST /api/content/[id]/access", () => {
   it("records download access", async () => {
     const { prisma } = await import("@/lib/prisma");
     const mockPrisma = prisma as any;
-    mockPrisma.contentAccess.create.mockResolvedValueOnce({});
-    mockPrisma.content.update.mockResolvedValueOnce({});
+    mockPrisma.content.findUnique.mockResolvedValueOnce({
+      facultyId: "test-faculty-id",
+      semester: 1,
+    });
+    mockPrisma.contentAccess.findFirst.mockResolvedValueOnce(null);
+    mockPrisma.$transaction.mockResolvedValueOnce([{}, {}]);
 
     const { POST } = await import("@/app/api/content/[id]/access/route");
     const request = createMockRequest("POST", `${BASE_URL}/api/content/content-1/access`, {

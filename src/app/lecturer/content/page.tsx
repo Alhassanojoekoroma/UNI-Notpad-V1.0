@@ -13,10 +13,12 @@ export default function ManageContentPage() {
             View, edit, and manage your uploaded materials
           </p>
         </div>
-        <Button render={<Link href="/upload" />}>
-          <Plus className="mr-2 size-4" />
-          Upload New
-        </Button>
+        <Link href="/lecturer/upload">
+          <Button>
+            <Plus className="mr-2 size-4" />
+            Upload New
+          </Button>
+        </Link>
       </div>
       <ContentTable />
     </div>

@@ -75,14 +75,16 @@ export function LecturerCodes() {
     queryKey: ["admin-lecturer-codes"],
     queryFn: async () => {
       const res = await fetch("/api/admin/lecturer-codes");
+      if (!res.ok) throw new Error("Failed to load codes");
       return res.json();
     },
   });
 
-  const { data: facultiesRes } = useQuery({
+  const { data: facultiesRes, isLoading: isLoadingFaculties, error: facultiesError } = useQuery({
     queryKey: ["admin-faculties"],
     queryFn: async () => {
       const res = await fetch("/api/admin/faculties");
+      if (!res.ok) throw new Error("Failed to load faculties");
       return res.json();
     },
   });
@@ -143,8 +145,10 @@ export function LecturerCodes() {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
-          <DialogTrigger render={<Button />}>
-            <Plus className="size-4 mr-2" /> Generate New Code
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="size-4 mr-2" /> Generate New Code
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -177,9 +181,16 @@ export function LecturerCodes() {
                 </div>
                 <div className="space-y-2">
                   <Label>Faculty (optional)</Label>
-                  <Select value={facultyId} onValueChange={(v) => setFacultyId(v ?? "")}>
+                  {facultiesError && (
+                    <p className="text-sm text-destructive">Failed to load faculties.</p>
+                  )}
+                  <Select 
+                    value={facultyId} 
+                    onValueChange={(v) => setFacultyId(v ?? "")}
+                    disabled={isLoadingFaculties}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select faculty" />
+                      <SelectValue placeholder={isLoadingFaculties ? "Loading faculties..." : "Select faculty"} />
                     </SelectTrigger>
                     <SelectContent>
                       {faculties.map((f) => (

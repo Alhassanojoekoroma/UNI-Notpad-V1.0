@@ -125,7 +125,7 @@ export async function POST(request: Request) {
           // Get actual token usage from Gemini response
           const finalResponse = await result.response;
           const tokensUsed =
-            finalResponse.usageMetadata?.totalTokenCount ?? 1;
+            finalResponse?.usageMetadata?.totalTokenCount ?? 1;
 
           // Save interaction to DB — fire-and-forget with error logging
           // so the stream closes promptly for the client

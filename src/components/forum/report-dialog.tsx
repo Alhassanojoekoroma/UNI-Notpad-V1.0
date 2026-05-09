@@ -49,11 +49,10 @@ export function ReportDialog({ postId }: ReportDialogProps) {
 
   return (
     <AlertDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setSubmitted(false); setReason(""); } }}>
-      <AlertDialogTrigger
-        render={<Button variant="ghost" size="sm" />}
-        aria-label="Report post"
-      >
-        <Flag className="size-4" />
+      <AlertDialogTrigger aria-label="Report post">
+        <Button variant="ghost" size="sm">
+          <Flag className="size-4" />
+        </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

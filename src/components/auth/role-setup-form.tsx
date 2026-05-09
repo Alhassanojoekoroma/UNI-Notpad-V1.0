@@ -28,6 +28,7 @@ export function RoleSetupForm() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [studentId, setStudentId] = useState("");
   const [facultyId, setFacultyId] = useState("");
   const [semester, setSemester] = useState("");
@@ -38,15 +39,24 @@ export function RoleSetupForm() {
 
   useEffect(() => {
     fetch("/api/users/faculties")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch data");
+        return res.json();
+      })
       .then((data) => {
         if (data.success) {
           setFaculties(data.data.faculties);
           setPrograms(data.data.programs);
           if (data.data.maxSemesters) setMaxSemesters(data.data.maxSemesters);
+        } else {
+          setError("Failed to load faculty data. Please refresh the page.");
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error("Setup data fetch error:", err);
+        setError("Could not load faculty data. Please check your connection.");
+      })
+      .finally(() => setIsLoadingData(false));
   }, []);
 
   const filteredPrograms = programs.filter((p) => p.facultyId === facultyId);
@@ -111,9 +121,18 @@ export function RoleSetupForm() {
           </div>
           <div className="space-y-2">
             <Label>Faculty</Label>
-            <Select value={facultyId} onValueChange={(v) => v !== null && setFacultyId(v)}>
+            <Select 
+              value={facultyId} 
+              onValueChange={(v) => {
+                if (v !== null) {
+                  setFacultyId(v);
+                  setProgramId(""); // Reset program when faculty changes
+                }
+              }}
+              disabled={isLoadingData || isLoading}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select faculty" />
+                <SelectValue placeholder={isLoadingData ? "Loading faculties..." : "Select faculty"} />
               </SelectTrigger>
               <SelectContent>
                 {faculties.map((f) => (
@@ -126,9 +145,13 @@ export function RoleSetupForm() {
           </div>
           <div className="space-y-2">
             <Label>Semester</Label>
-            <Select value={semester} onValueChange={(v) => v !== null && setSemester(v)}>
+            <Select 
+              value={semester} 
+              onValueChange={(v) => v !== null && setSemester(v)}
+              disabled={isLoadingData || isLoading}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select semester" />
+                <SelectValue placeholder={isLoadingData ? "Loading semesters..." : "Select semester"} />
               </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: maxSemesters }, (_, i) => i + 1).map(
@@ -146,10 +169,18 @@ export function RoleSetupForm() {
             <Select
               value={programId}
               onValueChange={(v) => v !== null && setProgramId(v)}
-              disabled={!facultyId}
+              disabled={!facultyId || filteredPrograms.length === 0}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select program" />
+                <SelectValue 
+                  placeholder={
+                    !facultyId 
+                      ? "Select a faculty first" 
+                      : filteredPrograms.length === 0 
+                        ? "No programs found" 
+                        : "Select program"
+                  } 
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredPrograms.map((p) => (

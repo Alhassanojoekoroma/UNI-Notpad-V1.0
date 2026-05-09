@@ -112,6 +112,7 @@ export default async function LandingPage() {
                     fill
                     className="object-cover"
                     sizes="280px"
+                    priority={i < 2}
                   />
                   <div
                     className="absolute inset-0"

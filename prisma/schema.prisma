@@ -225,6 +225,7 @@ model Content {
   fileSize      Int // bytes
   facultyId     String
   semester      Int
+  week          Int           @default(1) // Week number (1-8) for grouping within semester
   programId     String?
   module        String
   moduleCode    String?
@@ -598,4 +599,11 @@ model AppSettings {
   isSetupComplete     Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+model AdminSettings {
+  id           String @id @default("default")
+  themeColors  Json   @default("{\"primary\":\"#6fcf2e\",\"secondary\":\"#2a4a2a\",\"accent\":\"#90ee90\",\"background\":\"#0d0d12\",\"surface\":\"#181820\",\"text\":\"#ffffff\",\"border\":\"#2a2a36\",\"success\":\"#10b981\",\"warning\":\"#f59e0b\",\"danger\":\"#ef4444\"}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

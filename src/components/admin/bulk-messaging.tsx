@@ -48,10 +48,11 @@ export function BulkMessaging() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const { data: facultiesRes } = useQuery({
+  const { data: facultiesRes, isLoading: isLoadingFaculties, error: facultiesError } = useQuery({
     queryKey: ["admin-faculties"],
     queryFn: async () => {
       const res = await fetch("/api/admin/faculties");
+      if (!res.ok) throw new Error("Failed to load faculties");
       return res.json();
     },
   });
@@ -162,9 +163,16 @@ export function BulkMessaging() {
             {filterType === "FACULTY" && (
               <div className="space-y-2">
                 <Label>Faculty</Label>
-                <Select value={filterFacultyId} onValueChange={(v) => setFilterFacultyId(v ?? "")}>
+                {facultiesError && (
+                  <p className="text-sm text-destructive">Failed to load faculties. Please try again.</p>
+                )}
+                <Select 
+                  value={filterFacultyId} 
+                  onValueChange={(v) => setFilterFacultyId(v ?? "")}
+                  disabled={isLoadingFaculties}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select faculty" />
+                    <SelectValue placeholder={isLoadingFaculties ? "Loading faculties..." : "Select faculty"} />
                   </SelectTrigger>
                   <SelectContent>
                     {faculties.map((f) => (

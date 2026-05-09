@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, AlertCircle } from "lucide-react";
 
 type PdfViewerProps = {
   url: string;
@@ -11,16 +11,21 @@ type PdfViewerProps = {
 
 export function PdfViewer({ url, title }: PdfViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   function toggleFullscreen() {
     const elem = document.getElementById("pdf-container");
     if (!elem) return;
 
     if (!document.fullscreenElement) {
-      elem.requestFullscreen();
+      elem.requestFullscreen().catch((err) => {
+        console.error("Fullscreen request failed:", err);
+      });
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen();
+      document.exitFullscreen().catch((err) => {
+        console.error("Exit fullscreen failed:", err);
+      });
       setIsFullscreen(false);
     }
   }
@@ -36,16 +41,34 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
             size="icon"
             className="size-8"
             onClick={toggleFullscreen}
+            title="Toggle fullscreen"
           >
             <Maximize className="size-4" />
           </Button>
         </div>
       </div>
-      <iframe
-        src={`${url}#toolbar=1`}
-        className="w-full min-h-[600px] flex-1"
-        title={title}
-      />
+      {loadError ? (
+        <div className="w-full min-h-[600px] flex-1 flex items-center justify-center bg-muted">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <AlertCircle className="size-8 text-destructive" />
+            <p className="text-sm font-medium">Failed to load PDF</p>
+            <p className="text-xs text-muted-foreground">Please try again or download the file</p>
+            <a href={url} download={title}>
+              <Button variant="outline" size="sm">
+                Download Instead
+              </Button>
+            </a>
+          </div>
+        </div>
+      ) : (
+        <iframe
+          src={`${url}#toolbar=1`}
+          className="w-full min-h-[600px] flex-1"
+          title={title}
+          onError={() => setLoadError(true)}
+          sandbox="allow-same-origin allow-popups"
+        />
+      )}
     </div>
   );
 }
