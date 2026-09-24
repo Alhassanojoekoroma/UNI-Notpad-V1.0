@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { facultySchema } from "@/lib/validators/admin";
 import { createAuditLog } from "@/lib/audit";
 
 export async function GET() {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const faculties = await prisma.faculty.findMany({
       include: { programs: true },
@@ -32,14 +26,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const body = await request.json();
     const data = facultySchema.parse(body);
@@ -47,7 +35,7 @@ export async function POST(request: Request) {
     const faculty = await prisma.faculty.create({ data });
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action: "faculty.created",
       entityType: "faculty",
       entityId: faculty.id,

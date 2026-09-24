@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessFaculty, forbidden } from "@/lib/rbac";
 
 export async function PATCH(
   _request: Request,
@@ -23,7 +24,8 @@ export async function PATCH(
       select: {
         id: true,
         parentId: true,
-        parent: { select: { authorId: true } },
+        facultyId: true,
+        parent: { select: { authorId: true, facultyId: true } },
       },
     });
 
@@ -39,6 +41,13 @@ export async function PATCH(
         { success: false, error: "Only replies can be accepted as answers" },
         { status: 400 }
       );
+    }
+
+    if (
+      !canAccessFaculty(session.user, reply.facultyId) ||
+      !canAccessFaculty(session.user, reply.parent.facultyId)
+    ) {
+      return forbidden("You cannot manage another faculty's forum.");
     }
 
     if (reply.parent.authorId !== session.user.id) {

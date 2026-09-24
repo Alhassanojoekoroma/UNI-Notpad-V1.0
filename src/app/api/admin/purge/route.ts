@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { purgeDeletedUsers } from "@/lib/purge-deleted-users";
 
 export async function POST() {
   try {
-    const session = await auth();
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const purgedCount = await purgeDeletedUsers();
 

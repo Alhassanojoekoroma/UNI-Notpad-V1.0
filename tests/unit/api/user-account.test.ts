@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createMockRequest, parseResponse, BASE_URL } from "../../helpers/request";
 
 beforeEach(() => {
@@ -56,6 +56,30 @@ describe("DELETE /api/users/me", () => {
     const response = await DELETE(request);
 
     expect(response.status).toBe(401);
+  });
+
+  it("allows an OAuth-only user to request deletion without a password", async () => {
+    const { prisma } = await import("@/lib/prisma");
+    const mockPrisma = prisma as any;
+    mockPrisma.user.findUnique.mockResolvedValueOnce({
+      password: null,
+      email: "oauth@test.com",
+      name: "OAuth User",
+    });
+    mockPrisma.user.update.mockResolvedValueOnce({});
+    mockPrisma.appSettings.findFirst.mockResolvedValueOnce(null);
+
+    const bcrypt = await import("bcryptjs");
+    const compare = bcrypt.default.compare as any;
+
+    const { DELETE } = await import("@/app/api/users/me/route");
+    const response = await DELETE(
+      createMockRequest("DELETE", `${BASE_URL}/api/users/me`, {}),
+    );
+
+    expect(response.status).toBe(200);
+    expect(compare).not.toHaveBeenCalled();
+    expect(mockPrisma.user.update).toHaveBeenCalledOnce();
   });
 
   it("returns 401 when unauthenticated", async () => {
@@ -336,7 +360,50 @@ describe("GET /api/lecturer/analytics", () => {
 
 // ── POST /api/setup ───────────────────────────────────────────────
 
+// The installation wizard creates the first ADMIN and writes every API key, so
+// `isSetupComplete === false` is not a sufficient gate on its own — a server-side
+// SETUP_TOKEN must also be presented.
+const SETUP_TOKEN = "test-setup-token";
+
 describe("POST /api/setup", () => {
+  beforeEach(() => {
+    process.env.SETUP_TOKEN = SETUP_TOKEN;
+  });
+
+  afterEach(() => {
+    delete process.env.SETUP_TOKEN;
+  });
+
+  it("refuses when no setup token is configured on the server (503)", async () => {
+    delete process.env.SETUP_TOKEN;
+
+    const { POST } = await import("@/app/api/setup/route");
+    const response = await POST(
+      createMockRequest("POST", `${BASE_URL}/api/setup`, validSetupBody),
+    );
+
+    expect(response.status).toBe(503);
+  });
+
+  it("refuses an anonymous caller with no token (403)", async () => {
+    const { POST } = await import("@/app/api/setup/route");
+    const response = await POST(
+      createMockRequest("POST", `${BASE_URL}/api/setup`, validSetupBody),
+    );
+
+    expect(response.status).toBe(403);
+  });
+
+  it("refuses a wrong token (403)", async () => {
+    const { POST } = await import("@/app/api/setup/route");
+    const response = await POST(
+      createMockRequest("POST", `${BASE_URL}/api/setup`, validSetupBody, {
+        "x-setup-token": "not-the-token",
+      }),
+    );
+
+    expect(response.status).toBe(403);
+  });
   const validSetupBody = {
     universityName: "Test University",
     adminName: "Admin User",
@@ -369,7 +436,9 @@ describe("POST /api/setup", () => {
     mockPrisma.appSettings.upsert.mockResolvedValueOnce({});
 
     const { POST } = await import("@/app/api/setup/route");
-    const request = createMockRequest("POST", `${BASE_URL}/api/setup`, validSetupBody);
+    const request = createMockRequest("POST", `${BASE_URL}/api/setup`, validSetupBody, {
+      "x-setup-token": SETUP_TOKEN,
+    });
     const response = await POST(request);
     const json = await parseResponse<any>(response);
 
@@ -385,7 +454,9 @@ describe("POST /api/setup", () => {
     });
 
     const { POST } = await import("@/app/api/setup/route");
-    const request = createMockRequest("POST", `${BASE_URL}/api/setup`, validSetupBody);
+    const request = createMockRequest("POST", `${BASE_URL}/api/setup`, validSetupBody, {
+      "x-setup-token": SETUP_TOKEN,
+    });
     const response = await POST(request);
     const json = await parseResponse<any>(response);
 
@@ -400,9 +471,12 @@ describe("POST /api/setup", () => {
     mockPrisma.appSettings.findUnique.mockResolvedValueOnce(null);
 
     const { POST } = await import("@/app/api/setup/route");
-    const request = createMockRequest("POST", `${BASE_URL}/api/setup`, {
-      universityName: "",
-    });
+    const request = createMockRequest(
+      "POST",
+      `${BASE_URL}/api/setup`,
+      { universityName: "" },
+      { "x-setup-token": SETUP_TOKEN },
+    );
     const response = await POST(request);
 
     expect(response.status).toBe(400);

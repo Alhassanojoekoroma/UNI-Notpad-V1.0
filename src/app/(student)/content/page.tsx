@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Collection {
   id: string;
@@ -17,6 +18,7 @@ interface Collection {
   category: string;
   materialCount: number;
   semester: number;
+  progress: number;
 }
 
 const gradients = [
@@ -30,9 +32,10 @@ const gradients = [
 
 export default function BrowseContentPage() {
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [filteredCollections, setFilteredCollections] = useState<Collection[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<string | null>("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [requestVersion, setRequestVersion] = useState(0);
 
   const semesters = [
     { value: "all", label: "All Semesters" },
@@ -47,38 +50,41 @@ export default function BrowseContentPage() {
   ];
 
   useEffect(() => {
-    fetchCollections();
-  }, []);
+    const controller = new AbortController();
 
-  useEffect(() => {
-    filterCollections();
-  }, [selectedSemester, collections]);
+    async function fetchCollections() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await fetch("/api/content/collections", {
+          signal: controller.signal,
+        });
+        const data = await response.json();
 
-  const fetchCollections = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch("/api/content/collections");
-      const data = await response.json();
-
-      if (data.success) {
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Course materials could not be loaded.");
+        }
         setCollections(data.data);
+      } catch (requestError) {
+        if (!controller.signal.aborted) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Course materials could not be loaded.",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch collections:", error);
-    } finally {
-      setIsLoading(false);
     }
-  };
 
-  const filterCollections = () => {
-    if (selectedSemester === "all") {
-      setFilteredCollections(collections);
-    } else {
-      setFilteredCollections(
-        collections.filter((c) => c.semester === Number(selectedSemester))
-      );
-    }
-  };
+    void fetchCollections();
+    return () => controller.abort();
+  }, [requestVersion]);
+
+  const filteredCollections = selectedSemester === "all"
+    ? collections
+    : collections.filter((collection) => collection.semester === Number(selectedSemester));
 
   return (
     <div className="space-y-8">
@@ -114,6 +120,14 @@ export default function BrowseContentPage() {
         <div className="flex justify-center items-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+      ) : error ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-8 text-center" role="alert">
+          <p className="font-medium">We could not load your course materials.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+          <Button className="mt-4" variant="outline" onClick={() => setRequestVersion((version) => version + 1)}>
+            Try again
+          </Button>
+        </div>
       ) : filteredCollections.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground text-lg">
@@ -139,7 +153,7 @@ export default function BrowseContentPage() {
               }
               materialCount={collection.materialCount}
               semester={collection.semester}
-              progress={Math.floor(Math.random() * 100)}
+              progress={collection.progress}
               gradient={gradients[index % gradients.length]}
               href={`/content/collection/${collection.id}`}
             />

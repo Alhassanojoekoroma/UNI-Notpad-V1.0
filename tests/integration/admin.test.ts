@@ -13,8 +13,6 @@ import {
   createTestUser,
   createTestAdmin,
   createTestLecturer,
-  createTestFaculty,
-  createTestProgram,
   resetFixtureCounter,
 } from "../helpers/fixtures";
 
@@ -38,18 +36,22 @@ afterAll(async () => {
 /** Seed faculty, program, and admin user */
 async function seedAdmin() {
   const faculty = await testPrisma.faculty.create({
-    data: { id: "test-faculty-id", name: "Engineering", code: "ENG" },
+    data: { id: "fac-admin", name: "Engineering", code: "ENG_ADM" },
   });
   await testPrisma.program.create({
     data: {
-      id: "test-program-id",
+      id: "prog-admin",
       name: "Computer Science",
-      code: "CS",
+      code: "CS_ADM",
       facultyId: faculty.id,
     },
   });
   const admin = await testPrisma.user.create({
-    data: createTestAdmin({ id: "admin-1", facultyId: faculty.id }),
+    data: createTestAdmin({
+      id: "admin-1",
+      facultyId: faculty.id,
+      programId: "prog-admin",
+    }),
   });
   return { faculty, admin };
 }
@@ -90,6 +92,7 @@ describe("Lecturer code flow", () => {
         id: "lecturer-1",
         name: "Dr. Jane Smith",
         facultyId: faculty.id,
+        programId: "prog-admin",
       }),
     });
     expect(lecturer.role).toBe("LECTURER");
@@ -112,11 +115,15 @@ describe("Lecturer code flow", () => {
 
 describe("User management flow", () => {
   it("should change user role and persist it", async () => {
-    const { faculty, admin } = await seedAdmin();
+    const { faculty } = await seedAdmin();
 
     // Create a regular student
     const student = await testPrisma.user.create({
-      data: createTestUser({ id: "student-1", facultyId: faculty.id }),
+      data: createTestUser({
+        id: "student-1",
+        facultyId: faculty.id,
+        programId: "prog-admin",
+      }),
     });
     expect(student.role).toBe("STUDENT");
 
@@ -135,10 +142,14 @@ describe("User management flow", () => {
   });
 
   it("should soft delete a user and exclude them from active queries", async () => {
-    const { faculty, admin } = await seedAdmin();
+    const { faculty } = await seedAdmin();
 
     const user = await testPrisma.user.create({
-      data: createTestUser({ id: "student-1", facultyId: faculty.id }),
+      data: createTestUser({
+        id: "student-1",
+        facultyId: faculty.id,
+        programId: "prog-admin",
+      }),
     });
 
     // Soft delete
@@ -168,7 +179,11 @@ describe("User management flow", () => {
     const { faculty, admin } = await seedAdmin();
 
     const user = await testPrisma.user.create({
-      data: createTestUser({ id: "student-1", facultyId: faculty.id }),
+      data: createTestUser({
+        id: "student-1",
+        facultyId: faculty.id,
+        programId: "prog-admin",
+      }),
     });
 
     // Log role change

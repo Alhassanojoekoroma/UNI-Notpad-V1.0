@@ -14,7 +14,7 @@ export const authConfig: NextAuthConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isPublicPage = ["/", "/login", "/register", "/setup"].includes(
-        nextUrl.pathname
+        nextUrl.pathname,
       );
       if (isPublicPage) return true;
       if (!isLoggedIn) return false;
@@ -27,10 +27,11 @@ export const authConfig: NextAuthConfig = {
         token.semester = user.semester;
         token.programId = user.programId;
         token.studentId = user.studentId;
+        token.issuedAt = Date.now();
         token.lastVerified = Date.now();
       }
 
-      // Periodically re-check user is still active in DB
+      // Periodically re-check the user is still active in the DB.
       const lastVerified = (token.lastVerified as number) ?? 0;
       if (Date.now() - lastVerified > SESSION_REVALIDATE_MS) {
         const { prisma } = await import("@/lib/prisma");
@@ -40,6 +41,7 @@ export const authConfig: NextAuthConfig = {
             deletedAt: true,
             isSuspended: true,
             isActive: true,
+            passwordChangedAt: true,
             role: true,
             facultyId: true,
             semester: true,
@@ -47,11 +49,27 @@ export const authConfig: NextAuthConfig = {
             studentId: true,
           },
         });
-        if (!dbUser || dbUser.deletedAt || dbUser.isSuspended || !dbUser.isActive) {
-          // Return empty token to force sign-out
+
+        if (
+          !dbUser ||
+          dbUser.deletedAt ||
+          dbUser.isSuspended ||
+          !dbUser.isActive
+        ) {
           return { ...token, invalidated: true };
         }
-        // Refresh role/faculty data in case admin changed it
+
+        // Reject tokens minted before the last password change, so a reset
+        // actually terminates an attacker's existing session.
+        const issuedAt = (token.issuedAt as number) ?? 0;
+        if (
+          dbUser.passwordChangedAt &&
+          dbUser.passwordChangedAt.getTime() > issuedAt
+        ) {
+          return { ...token, invalidated: true };
+        }
+
+        // Refresh role/faculty data in case an admin changed it.
         token.role = dbUser.role;
         token.facultyId = dbUser.facultyId;
         token.semester = dbUser.semester;
@@ -63,21 +81,29 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
     async session({ session, token, user }) {
-      // If user was invalidated (deleted/suspended), return empty session
+      // An invalidated token (deleted, suspended, or password changed) must not
+      // produce a usable session. Previously `id` was set to "" and everything
+      // downstream still saw a truthy `session.user`, so guards written as
+      // `if (!session?.user)` let the request through with an empty user id.
       if (token?.invalidated) {
-        session.user.id = "";
-        return session;
+        return {
+          ...session,
+          user: undefined as unknown as typeof session.user,
+          expires: new Date(0).toISOString() as typeof session.expires,
+        };
       }
-      // For JWT strategy (credentials)
+
+      // JWT strategy (credentials)
       if (token) {
         session.user.id = token.sub!;
         session.user.role = token.role as UserRole;
-        session.user.facultyId = token.facultyId as string;
-        session.user.semester = token.semester as number;
-        session.user.programId = token.programId as string;
-        session.user.studentId = token.studentId as string;
+        session.user.facultyId = token.facultyId as string | null;
+        session.user.semester = token.semester as number | null;
+        session.user.programId = token.programId as string | null;
+        session.user.studentId = token.studentId as string | null;
       }
-      // For DB strategy (OAuth)
+
+      // DB strategy (OAuth)
       if (user) {
         session.user.role = user.role;
         session.user.facultyId = user.facultyId;
@@ -85,6 +111,7 @@ export const authConfig: NextAuthConfig = {
         session.user.programId = user.programId;
         session.user.studentId = user.studentId;
       }
+
       return session;
     },
   },

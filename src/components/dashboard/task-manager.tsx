@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,21 @@ const priorityColors = {
   MEDIUM: "default",
   LOW: "secondary",
 } as const;
+
+/** Re-renders subscribers once a minute so countdown labels stay accurate. */
+function subscribeToMinuteTick(onStoreChange: () => void) {
+  const id = setInterval(onStoreChange, 60_000);
+  return () => clearInterval(id);
+}
+
+// Cached so repeated getSnapshot() calls within one render return an identical
+// value — React loops forever otherwise.
+let cachedNow = Date.now();
+function getNowMs(): number {
+  const current = Date.now();
+  if (current - cachedNow >= 60_000) cachedNow = current;
+  return cachedNow;
+}
 
 export function TaskManager() {
   const queryClient = useQueryClient();
@@ -95,8 +110,18 @@ export function TaskManager() {
     },
   });
 
+  // `Date.now()` read directly in render is impure — it makes the same render
+  // produce different output over time, and the label never refreshed anyway.
+  //
+  // `useSyncExternalStore` reads the clock through a subscription instead: the
+  // server snapshot is null (so SSR and hydration agree), and the client
+  // snapshot re-reads every minute, which is the resolution the label shows.
+  const now = useSyncExternalStore(subscribeToMinuteTick, getNowMs, () => null);
+
   function getCountdown(deadline: string | Date) {
-    const diff = new Date(deadline).getTime() - Date.now();
+    // Null until hydrated, so server and first client render agree.
+    if (now === null) return null;
+    const diff = new Date(deadline).getTime() - now;
     if (diff <= 0) return "Overdue";
     const hours = Math.floor(diff / (1000 * 60 * 60));
     if (hours < 24) return `${hours}h left`;
@@ -210,11 +235,11 @@ export function TaskManager() {
                   )}
                 </div>
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8">
-                        <MoreHorizontal className="size-4" />
-                      </Button>
-                  </DropdownMenuTrigger>
+                  <DropdownMenuTrigger render={
+                    <Button variant="ghost" size="icon" className="size-8">
+                      <MoreHorizontal className="size-4" />
+                    </Button>
+                  } />
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       onClick={() => {

@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { contentRatingSchema } from "@/lib/validators/content";
+import { canAccessContent, forbidden, requireUser } from "@/lib/rbac";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const { id } = await params;
     const body = await request.json();
@@ -29,14 +24,28 @@ export async function POST(
 
     const { rating, feedbackText } = parsed.data;
 
+    const content = await prisma.content.findUnique({
+      where: { id },
+      select: { facultyId: true, semester: true, status: true },
+    });
+    if (!content) {
+      return NextResponse.json(
+        { success: false, error: "Content not found" },
+        { status: 404 },
+      );
+    }
+    if (!canAccessContent(guard.user, content)) {
+      return forbidden("Access denied");
+    }
+
     // Upsert the rating
     await prisma.contentRating.upsert({
       where: {
-        contentId_userId: { contentId: id, userId: session.user.id },
+        contentId_userId: { contentId: id, userId: guard.user.id },
       },
       create: {
         contentId: id,
-        userId: session.user.id,
+        userId: guard.user.id,
         rating,
         feedbackText,
       },

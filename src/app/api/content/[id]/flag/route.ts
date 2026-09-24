@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
+import { canAccessContent, forbidden, requireUser } from "@/lib/rbac";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const { id } = await params;
     const { reason } = await request.json();
@@ -28,7 +23,7 @@ export async function POST(
 
     const content = await prisma.content.findUnique({
       where: { id },
-      select: { title: true },
+      select: { title: true, facultyId: true, semester: true, status: true },
     });
 
     if (!content) {
@@ -38,9 +33,13 @@ export async function POST(
       );
     }
 
+    if (!canAccessContent(guard.user, content)) {
+      return forbidden("Access denied");
+    }
+
     // Prevent duplicate flags from the same user
     const existingFlag = await prisma.contentFlag.findFirst({
-      where: { contentId: id, reporterId: session.user.id },
+      where: { contentId: id, reporterId: guard.user.id },
     });
     if (existingFlag) {
       return NextResponse.json(
@@ -52,7 +51,7 @@ export async function POST(
     const flag = await prisma.contentFlag.create({
       data: {
         contentId: id,
-        reporterId: session.user.id,
+        reporterId: guard.user.id,
         reason,
       },
     });

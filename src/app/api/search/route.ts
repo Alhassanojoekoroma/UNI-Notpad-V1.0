@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { contentScopeFilter, requireUser } from "@/lib/rbac";
 
 export async function GET(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q");
@@ -22,16 +18,28 @@ export async function GET(request: Request) {
       });
     }
 
-    const searchTerm = q;
-    const userId = session.user.id;
+    const searchTerm = q.slice(0, 100);
+    const userId = guard.user.id;
     const limit = 5;
+
+    // Same isolation rules as /api/content. `?? undefined` was used here, which
+    // made Prisma drop the faculty constraint whenever the claim was null and
+    // silently widened the search to every faculty.
+    const contentScope = contentScopeFilter(
+      guard.user,
+    ) as Prisma.ContentWhereInput;
+
+    // Forum threads are faculty-scoped for everyone except admins.
+    const forumScope: Prisma.ForumPostWhereInput =
+      guard.user.role === "ADMIN"
+        ? {}
+        : { facultyId: guard.user.facultyId ?? "__unassigned__" };
 
     const [content, tasks, schedule, messages, forum] = await Promise.all([
       prisma.content.findMany({
         where: {
           status: "ACTIVE",
-          facultyId: session.user.facultyId ?? undefined,
-          semester: session.user.semester ?? undefined,
+          ...contentScope,
           OR: [
             { title: { contains: searchTerm, mode: "insensitive" } },
             { module: { contains: searchTerm, mode: "insensitive" } },
@@ -69,7 +77,7 @@ export async function GET(request: Request) {
       }),
       prisma.forumPost.findMany({
         where: {
-          facultyId: session.user.facultyId ?? undefined,
+          ...forumScope,
           OR: [
             { title: { contains: searchTerm, mode: "insensitive" } },
             { body: { contains: searchTerm, mode: "insensitive" } },

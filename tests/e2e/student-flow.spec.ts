@@ -22,9 +22,9 @@ test.describe("Public Pages", () => {
     await expect(page).toHaveURL(/\/login/);
 
     // Verify login form elements are present
-    await expect(page.locator('input[name="email"]')).toBeVisible();
-    await expect(page.locator('input[name="password"]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
   });
 
   test("terms of service page renders content", async ({ page }) => {

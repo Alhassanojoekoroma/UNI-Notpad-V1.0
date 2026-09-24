@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
@@ -130,11 +131,13 @@ export default async function ContentViewPage({
       )}
       {(content.fileType === "jpeg" || content.fileType === "png") && (
         <div className="rounded-lg border overflow-hidden">
-          <img
+          <Image
             src={content.fileUrl}
             alt={content.title}
-            className="w-full"
-            loading="lazy"
+            width={1600}
+            height={1200}
+            sizes="(max-width: 1024px) 100vw, 960px"
+            className="h-auto w-full"
           />
         </div>
       )}

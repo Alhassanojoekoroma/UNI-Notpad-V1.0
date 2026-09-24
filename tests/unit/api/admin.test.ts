@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createMockRequest, parseResponse, createMockParams, BASE_URL } from "../../helpers/request";
+import { createMockRequest, parseResponse, BASE_URL } from "../../helpers/request";
 
 vi.mock("@/lib/purge-deleted-users", () => ({
   purgeDeletedUsers: vi.fn().mockResolvedValue(3),
@@ -20,7 +20,8 @@ beforeEach(async () => {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-const ADMIN_SESSION = { user: { id: "admin-1", role: "ADMIN", email: "admin@test.com", name: "Admin" } };
+// Signed in, but not an admin. These callers must get 403 ("you can't do
+// that"), never 401 ("log in") — the two were previously conflated.
 const STUDENT_SESSION = { user: { id: "user-1", role: "STUDENT" } };
 
 // ── GET /api/admin/users ───────────────────────────────────────────
@@ -55,7 +56,7 @@ describe("GET /api/admin/users", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/users/route");
     const res = await GET(createMockRequest("GET", url));
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -87,7 +88,7 @@ describe("GET /api/admin/users/[id]", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/users/[id]/route");
     const res = await GET(createMockRequest("GET", url), { params: Promise.resolve({ id: "user-1" }) });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -115,7 +116,7 @@ describe("PATCH /api/admin/users/[id]", () => {
       createMockRequest("PATCH", url, { isSuspended: true }),
       { params: Promise.resolve({ id: "user-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -155,7 +156,7 @@ describe("DELETE /api/admin/users/[id]", () => {
       createMockRequest("DELETE", url),
       { params: Promise.resolve({ id: "user-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -186,7 +187,7 @@ describe("GET /api/admin/settings", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/settings/route");
     const res = await GET();
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -195,7 +196,9 @@ describe("GET /api/admin/settings", () => {
 describe("PATCH /api/admin/settings", () => {
   it("updates settings", async () => {
     const { PATCH } = await import("@/app/api/admin/settings/route");
-    mockPrisma.appSettings.update.mockResolvedValue({
+    // Upsert, not update: the settings row may not exist on a database where
+    // the installation wizard has never run.
+    mockPrisma.appSettings.upsert.mockResolvedValue({
       id: "default",
       universityName: "Test Uni",
       geminiApiKey: null,
@@ -219,7 +222,7 @@ describe("PATCH /api/admin/settings", () => {
     const res = await PATCH(
       createMockRequest("PATCH", `${BASE_URL}/api/admin/settings`, { universityName: "X" }),
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -241,7 +244,7 @@ describe("GET /api/admin/flags", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/flags/route");
     const res = await GET(createMockRequest("GET", `${BASE_URL}/api/admin/flags`));
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -281,7 +284,7 @@ describe("PATCH /api/admin/flags/[id]", () => {
       createMockRequest("PATCH", `${BASE_URL}/api/admin/flags/flag-1`, { status: "RESOLVED" }),
       { params: Promise.resolve({ id: "flag-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -303,7 +306,7 @@ describe("GET /api/admin/reports", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/reports/route");
     const res = await GET(createMockRequest("GET", `${BASE_URL}/api/admin/reports`));
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -340,7 +343,7 @@ describe("PATCH /api/admin/reports/[id]", () => {
       createMockRequest("PATCH", `${BASE_URL}/api/admin/reports/r-1`, { status: "RESOLVED" }),
       { params: Promise.resolve({ id: "r-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -363,7 +366,7 @@ describe("GET /api/admin/lecturer-codes", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/lecturer-codes/route");
     const res = await GET();
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -389,7 +392,7 @@ describe("POST /api/admin/lecturer-codes", () => {
     const res = await POST(
       createMockRequest("POST", `${BASE_URL}/api/admin/lecturer-codes`, { lecturerName: "Dr. X" }),
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -414,7 +417,7 @@ describe("DELETE /api/admin/lecturer-codes/[id]", () => {
       createMockRequest("DELETE", `${BASE_URL}/api/admin/lecturer-codes/lc-1`),
       { params: Promise.resolve({ id: "lc-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -462,7 +465,7 @@ describe("POST /api/admin/messages/bulk", () => {
     const res = await POST(
       createMockRequest("POST", `${BASE_URL}/api/admin/messages/bulk`, bulkBody),
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -486,7 +489,7 @@ describe("GET /api/admin/audit-log", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/audit-log/route");
     const res = await GET(createMockRequest("GET", `${BASE_URL}/api/admin/audit-log`));
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -514,7 +517,7 @@ describe("GET /api/admin/analytics", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/analytics/route");
     const res = await GET();
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -565,7 +568,7 @@ describe("GET /api/admin/faculties", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/faculties/route");
     const res = await GET();
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -588,7 +591,7 @@ describe("POST /api/admin/faculties", () => {
     const res = await POST(
       createMockRequest("POST", `${BASE_URL}/api/admin/faculties`, { name: "X", code: "X" }),
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -613,7 +616,7 @@ describe("PATCH /api/admin/faculties/[id]", () => {
       createMockRequest("PATCH", `${BASE_URL}/api/admin/faculties/fac-1`, { name: "X" }),
       { params: Promise.resolve({ id: "fac-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -638,7 +641,7 @@ describe("DELETE /api/admin/faculties/[id]", () => {
       createMockRequest("DELETE", `${BASE_URL}/api/admin/faculties/fac-1`),
       { params: Promise.resolve({ id: "fac-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -665,7 +668,7 @@ describe("POST /api/admin/programs", () => {
     const res = await POST(
       createMockRequest("POST", `${BASE_URL}/api/admin/programs`, { name: "X", code: "X", facultyId: "f" }),
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -690,7 +693,7 @@ describe("PATCH /api/admin/programs/[id]", () => {
       createMockRequest("PATCH", `${BASE_URL}/api/admin/programs/prog-1`, { name: "X" }),
       { params: Promise.resolve({ id: "prog-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -715,7 +718,7 @@ describe("DELETE /api/admin/programs/[id]", () => {
       createMockRequest("DELETE", `${BASE_URL}/api/admin/programs/prog-1`),
       { params: Promise.resolve({ id: "prog-1" }) },
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -742,7 +745,7 @@ describe("GET /api/admin/export", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { GET } = await import("@/app/api/admin/export/route");
     const res = await GET();
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -763,6 +766,6 @@ describe("POST /api/admin/purge", () => {
     mockAuth.mockResolvedValueOnce(STUDENT_SESSION);
     const { POST } = await import("@/app/api/admin/purge/route");
     const res = await POST();
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 });

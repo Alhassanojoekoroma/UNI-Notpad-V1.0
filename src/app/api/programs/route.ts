@@ -30,12 +30,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, data: programs });
   } catch (error) {
+    // Details stay server-side. Returning `error.message` to the client leaked
+    // Prisma error codes and schema names.
     console.error("Programs fetch error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    const errorStack = error instanceof Error ? error.stack : "";
-    console.error("Full error details:", { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { success: false, error: "Internal server error", details: errorMessage },
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }

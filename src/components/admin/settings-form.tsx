@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 interface Faculty {
   id: string;
@@ -291,11 +291,11 @@ function AcademicStructure({ faculties, queryClient }: { faculties: Faculty[]; q
               </div>
               <div className="flex gap-1">
                 <Dialog open={newProgramDialog === faculty.id} onOpenChange={(open) => setNewProgramDialog(open ? faculty.id : null)}>
-                  <DialogTrigger asChild>
+                  <DialogTrigger render={
                     <Button variant="ghost" size="sm">
                       <Plus className="size-3 mr-1" /> Program
                     </Button>
-                  </DialogTrigger>
+                  } />
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Add Program to {faculty.name}</DialogTitle>

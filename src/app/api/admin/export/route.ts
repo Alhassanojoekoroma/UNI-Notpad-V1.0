@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const [
       usersByFacultyAndRole,
@@ -81,7 +76,7 @@ export async function GET() {
     };
 
     await createAuditLog({
-      userId: session.user.id,
+      userId: guard.user.id,
       action: "admin.data_exported",
       entityType: "platform",
       entityId: "export",

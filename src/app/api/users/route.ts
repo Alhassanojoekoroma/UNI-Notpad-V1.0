@@ -41,12 +41,15 @@ export async function GET(request: Request) {
       where: {
         id: { notIn: Array.from(excludeIds) },
         isActive: true,
-        name: { contains: search, mode: "insensitive" },
+        isSuspended: false,
+        name: { contains: search.slice(0, 100), mode: "insensitive" },
       },
+      // `email` is deliberately omitted: the compose-message UI addresses users
+      // by id, and returning it let any signed-in user enumerate the whole
+      // directory two characters at a time.
       select: {
         id: true,
         name: true,
-        email: true,
         role: true,
         avatarUrl: true,
       },

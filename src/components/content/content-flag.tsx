@@ -53,12 +53,12 @@ export function ContentFlag({ contentId }: { contentId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+      <DialogTrigger render={
         <Button variant="ghost" size="sm">
           <Flag className="mr-2 size-4" />
           Report
         </Button>
-      </DialogTrigger>
+      } />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Report Content</DialogTitle>

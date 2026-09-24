@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { getStudentDashboardData } from "@/lib/dashboard/student-data";
 import { StudentDashboardClient } from "./dashboard-client";
 
@@ -7,7 +8,7 @@ export default async function StudentDashboardPage() {
   const userId = session?.user?.id;
 
   if (!userId) {
-    return <div style={{ padding: "20px" }}>Error: User not found</div>;
+    redirect("/login");
   }
 
   const data = await getStudentDashboardData(userId);

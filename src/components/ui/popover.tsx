@@ -10,10 +10,14 @@ function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 }
 
 function PopoverTrigger({
+  // `asChild` is accepted and ignored: it is the Radix spelling, and base-ui
+  // uses `render` instead. Swallowing it keeps migrated call sites from
+  // forwarding an unknown attribute onto the DOM.
   asChild,
   render,
   ...props
-}: PopoverPrimitive.Trigger.Props & { asChild?: boolean; render?: any }) {
+}: PopoverPrimitive.Trigger.Props & { asChild?: boolean }) {
+  void asChild
   return (
     <PopoverPrimitive.Trigger
       data-slot="popover-trigger"

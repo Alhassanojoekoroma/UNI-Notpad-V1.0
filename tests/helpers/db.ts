@@ -4,11 +4,11 @@
  */
 import { PrismaClient } from "@prisma/client";
 
-const DATABASE_URL = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL_TEST;
 
 if (!DATABASE_URL) {
   throw new Error(
-    "DATABASE_URL_TEST or DATABASE_URL must be set for integration tests"
+    "DATABASE_URL_TEST must be set for integration tests. Refusing to use DATABASE_URL because cleanup truncates every application table."
   );
 }
 

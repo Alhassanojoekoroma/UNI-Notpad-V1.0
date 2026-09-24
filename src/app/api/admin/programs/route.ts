@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { programSchema } from "@/lib/validators/admin";
 import { createAuditLog } from "@/lib/audit";
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const body = await request.json();
     const data = programSchema.parse(body);
@@ -21,7 +15,7 @@ export async function POST(request: Request) {
     const program = await prisma.program.create({ data });
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action: "program.created",
       entityType: "program",
       entityId: program.id,

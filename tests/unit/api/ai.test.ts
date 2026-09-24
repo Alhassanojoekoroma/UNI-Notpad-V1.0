@@ -67,8 +67,6 @@ describe("POST /api/ai/query", () => {
 // ── GET /api/ai/status ──────────────────────────────────────────────
 
 describe("GET /api/ai/status", () => {
-  const url = `${BASE_URL}/api/ai/status`;
-
   it("returns query status -> 200", async () => {
     const { GET } = await import("@/app/api/ai/status/route");
     (mockRateLimit.getAIQueryStatus as any).mockResolvedValueOnce({

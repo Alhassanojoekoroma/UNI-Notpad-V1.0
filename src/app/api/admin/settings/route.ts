@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { settingsSchema } from "@/lib/validators/admin";
 import { createAuditLog } from "@/lib/audit";
@@ -12,14 +12,8 @@ function maskKey(key: string | null | undefined): string | null {
 
 export async function GET() {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const settings = await prisma.appSettings.findUnique({
       where: { id: "default" },
@@ -53,14 +47,8 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const body = await request.json();
     const data = settingsSchema.parse(body);
@@ -76,13 +64,16 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const updated = await prisma.appSettings.update({
+    // `update` threw P2025 (surfacing as an opaque 500) on any database where
+    // the setup wizard had not yet created the singleton row.
+    const updated = await prisma.appSettings.upsert({
       where: { id: "default" },
-      data: updateData,
+      create: { id: "default", ...updateData },
+      update: updateData,
     });
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action: "settings.updated",
       entityType: "settings",
       entityId: "default",
@@ -105,7 +96,7 @@ export async function PATCH(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
       return NextResponse.json(
-        { success: false, error: "Validation failed", details: error },
+        { success: false, error: "Validation failed" },
         { status: 400 }
       );
     }

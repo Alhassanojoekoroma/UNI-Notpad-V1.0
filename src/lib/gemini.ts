@@ -1,5 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { prisma } from "./prisma";
+import { contentScopeFilter, type SessionUser } from "./rbac";
+
+/** Upper bound on how many materials one request may attach as context. */
+export const MAX_SOURCE_ATTACHMENTS = 10;
 
 // Cache AppSettings for 60 seconds to avoid hitting DB on every request
 let cachedSettings: {
@@ -25,17 +29,35 @@ async function getSettings() {
 
 export async function getGeminiClient() {
   const settings = await getSettings();
-  const apiKey = settings.geminiApiKey || process.env.GEMINI_API_KEY;
+  // Environment variables win over the database copy so operators can keep
+  // secrets out of Postgres entirely.
+  const apiKey = process.env.GEMINI_API_KEY || settings.geminiApiKey;
   if (!apiKey) throw new Error("Gemini API key not configured");
   const genAI = new GoogleGenerativeAI(apiKey);
   return genAI.getGenerativeModel({ model: settings.geminiModel });
 }
 
-// Fetch source content metadata for Gemini context
-export async function fetchSourceContent(contentIds: string[]) {
+/**
+ * Fetch source content metadata for Gemini context.
+ *
+ * The caller's scope is REQUIRED. Without it this helper trusted whatever IDs
+ * the client sent, so any student could attach content belonging to another
+ * faculty and have its title, description and Cloudinary `secure_url` echoed
+ * back through the model. The filter mirrors `contentScopeFilter` in
+ * `@/lib/rbac` so every reader applies the same isolation rules.
+ */
+export async function fetchSourceContent(
+  contentIds: string[],
+  scope: SessionUser,
+) {
   if (!contentIds.length) return [];
-  const contents = await prisma.content.findMany({
-    where: { id: { in: contentIds } },
+
+  // Cap the attachment count so a single request cannot pull an unbounded
+  // amount of material into the prompt.
+  const ids = Array.from(new Set(contentIds)).slice(0, MAX_SOURCE_ATTACHMENTS);
+
+  return prisma.content.findMany({
+    where: { id: { in: ids }, ...contentScopeFilter(scope) },
     select: {
       id: true,
       title: true,
@@ -46,7 +68,6 @@ export async function fetchSourceContent(contentIds: string[]) {
       description: true,
     },
   });
-  return contents;
 }
 
 type SourceContent = Awaited<ReturnType<typeof fetchSourceContent>>[number];

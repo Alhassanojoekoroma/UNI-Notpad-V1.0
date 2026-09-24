@@ -66,8 +66,8 @@ export async function DELETE(request: Request) {
         });
         const appName = settings?.universityName ?? "UniNotepad";
 
-        const { resend } = await import("@/lib/resend");
-        await resend.emails.send({
+        const { sendEmail } = await import("@/lib/resend");
+        await sendEmail({
           from: `${appName} <noreply@${settings?.domain ?? "uninotepad.com"}>`,
           to: user.email,
           subject: "Account Deletion Requested",
@@ -75,7 +75,7 @@ export async function DELETE(request: Request) {
             <h2>Account Deletion Requested</h2>
             <p>Hi ${user.name ?? "there"},</p>
             <p>Your account deletion has been requested. Your account and all associated data will be permanently deleted in <strong>7 days</strong>.</p>
-            <p>If you did not request this or want to cancel, log in and visit your Settings page to cancel the deletion.</p>
+            <p>If you did not request this or want to cancel, contact your institution's support team within 7 days.</p>
             <p>After 7 days, this action cannot be undone.</p>
             <p>— ${appName}</p>
           `,

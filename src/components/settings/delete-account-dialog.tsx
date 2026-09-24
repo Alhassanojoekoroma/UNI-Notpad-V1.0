@@ -21,11 +21,13 @@ import { AlertTriangle } from "lucide-react";
 
 interface DeleteAccountDialogProps {
   pendingDeletion: boolean;
+  hasPassword?: boolean;
   onCancelled?: () => void;
 }
 
 export function DeleteAccountDialog({
   pendingDeletion,
+  hasPassword = true,
   onCancelled,
 }: DeleteAccountDialogProps) {
   const [password, setPassword] = useState("");
@@ -107,8 +109,8 @@ export function DeleteAccountDialog({
           <AlertDialogTitle>Delete your account?</AlertDialogTitle>
           <AlertDialogDescription>
             Your account will be deactivated immediately and permanently deleted
-            after 7 days. You can cancel within that period by logging in and
-            visiting this page.
+            after 7 days. Contact your institution&apos;s support team during that
+            period if you need to recover it.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-4 py-2">
@@ -124,18 +126,20 @@ export function DeleteAccountDialog({
               maxLength={500}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="delete-password">
-              Confirm your password
-            </Label>
-            <Input
-              id="delete-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-            />
-          </div>
+          {hasPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">
+                Confirm your password
+              </Label>
+              <Input
+                id="delete-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+              />
+            </div>
+          )}
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
@@ -145,7 +149,7 @@ export function DeleteAccountDialog({
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={!password || loading}
+            disabled={(hasPassword && !password) || loading}
           >
             {loading && <Spinner className="mr-2 size-4" />}
             Delete My Account

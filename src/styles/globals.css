@@ -130,17 +130,6 @@
 .aos-delay-500 { animation-delay: 0.50s; }
 .aos-delay-600 { animation-delay: 0.60s; }
 
-/* ── Landing page scroll/ticker animations ─────────────────────────── */
-@keyframes ticker        { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-@keyframes scrollFwd     { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-@keyframes scrollRev     { from { transform: translateX(-50%) } to { transform: translateX(0) } }
-@keyframes carouselSlide { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-
-.animate-ticker      { animation: ticker        20s linear infinite; }
-.animate-carousel    { animation: carouselSlide 28s linear infinite; }
-.animate-scroll-fwd  { animation: scrollFwd    30s linear infinite; }
-.animate-scroll-rev  { animation: scrollRev    30s linear infinite; }
-
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

@@ -80,7 +80,7 @@ function ResetPasswordForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Set New Password</CardTitle>
+        <CardTitle className="text-2xl"><h1>Set New Password</h1></CardTitle>
         <CardDescription>
           {success
             ? "Password updated! Redirecting to login..."
@@ -131,7 +131,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
+    <div className="flex w-full items-center justify-center px-4">
       <Suspense fallback={null}>
         <ResetPasswordForm />
       </Suspense>

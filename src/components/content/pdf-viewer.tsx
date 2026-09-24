@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, AlertCircle } from "lucide-react";
+import { Maximize, AlertCircle } from "lucide-react";
 
 type PdfViewerProps = {
   url: string;
@@ -10,7 +10,6 @@ type PdfViewerProps = {
 };
 
 export function PdfViewer({ url, title }: PdfViewerProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
   function toggleFullscreen() {
@@ -21,12 +20,10 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
       elem.requestFullscreen().catch((err) => {
         console.error("Fullscreen request failed:", err);
       });
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen().catch((err) => {
         console.error("Exit fullscreen failed:", err);
       });
-      setIsFullscreen(false);
     }
   }
 

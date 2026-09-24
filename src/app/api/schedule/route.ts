@@ -3,7 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createScheduleSchema } from "@/lib/validators/schedule";
 
-export async function GET() {
+export async function GET(request: Request) {
+  void request;
   try {
     const session = await auth();
     if (!session?.user) {

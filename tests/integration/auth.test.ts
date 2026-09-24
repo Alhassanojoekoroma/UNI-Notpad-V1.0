@@ -41,13 +41,13 @@ describe("Registration + Verification flow", () => {
 
     // 2. Create faculty and program (needed for user FK)
     const faculty = await testPrisma.faculty.create({
-      data: { id: "test-faculty-id", name: "Engineering", code: "ENG" },
+      data: { id: "fac-auth", name: "Engineering", code: "ENG_AUTH" },
     });
-    await testPrisma.program.create({
+    const program = await testPrisma.program.create({
       data: {
-        id: "test-program-id",
+        id: "prog-auth",
         name: "Computer Science",
-        code: "CS",
+        code: "CS_AUTH",
         facultyId: faculty.id,
       },
     });
@@ -57,6 +57,8 @@ describe("Registration + Verification flow", () => {
     const userData = createTestUser({
       password: hashedPassword,
       emailVerified: null, // not yet verified
+      facultyId: faculty.id,
+      programId: program.id,
     });
 
     const user = await testPrisma.user.create({ data: userData });
@@ -99,13 +101,13 @@ describe("Registration + Verification flow", () => {
 
   it("should validate password with bcrypt compare", async () => {
     const faculty = await testPrisma.faculty.create({
-      data: { id: "test-faculty-id", name: "Engineering", code: "ENG" },
+      data: { id: "fac-auth", name: "Engineering", code: "ENG_AUTH" },
     });
-    await testPrisma.program.create({
+    const program = await testPrisma.program.create({
       data: {
-        id: "test-program-id",
+        id: "prog-auth",
         name: "Computer Science",
-        code: "CS",
+        code: "CS_AUTH",
         facultyId: faculty.id,
       },
     });
@@ -113,7 +115,11 @@ describe("Registration + Verification flow", () => {
     const plainPassword = "MyPassword456!";
     const hashedPassword = await bcrypt.hash(plainPassword, 12);
 
-    const userData = createTestUser({ password: hashedPassword });
+    const userData = createTestUser({
+      password: hashedPassword,
+      facultyId: faculty.id,
+      programId: program.id,
+    });
     const user = await testPrisma.user.create({ data: userData });
 
     // Simulate login: fetch user and compare password
@@ -133,23 +139,31 @@ describe("Registration + Verification flow", () => {
 describe("Referral flow", () => {
   it("should link referrer and referee with bonus tokens", async () => {
     const faculty = await testPrisma.faculty.create({
-      data: { id: "test-faculty-id", name: "Engineering", code: "ENG" },
+      data: { id: "fac-auth", name: "Engineering", code: "ENG_AUTH" },
     });
-    await testPrisma.program.create({
+    const program = await testPrisma.program.create({
       data: {
-        id: "test-program-id",
+        id: "prog-auth",
         name: "Computer Science",
-        code: "CS",
+        code: "CS_AUTH",
         facultyId: faculty.id,
       },
     });
 
     // 1. Create user A (referrer) with a referral code
-    const userAData = createTestUser({ referralCode: "REFCODE_A" });
+    const userAData = createTestUser({
+      referralCode: "REFCODE_A",
+      facultyId: faculty.id,
+      programId: program.id,
+    });
     const userA = await testPrisma.user.create({ data: userAData });
 
     // 2. Create user B (referee) who used A's referral code
-    const userBData = createTestUser({ referralCode: "REFCODE_B" });
+    const userBData = createTestUser({
+      referralCode: "REFCODE_B",
+      facultyId: faculty.id,
+      programId: program.id,
+    });
     const userB = await testPrisma.user.create({ data: userBData });
 
     // 3. Create Referral record linking both

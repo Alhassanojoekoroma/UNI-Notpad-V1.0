@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessFaculty, forbidden, requireUser } from "@/lib/rbac";
 import { createForumPostSchema } from "@/lib/validators/forum";
 import { createNotification } from "@/lib/notifications";
 import { stripHtmlTags } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const { searchParams } = request.nextUrl;
-    const module = searchParams.get("module");
+    const moduleFilter = searchParams.get("module");
     // Students can only access their own faculty's forum
-    const facultyId =
-      session.user.role === "STUDENT"
-        ? session.user.facultyId
-        : (searchParams.get("facultyId") ?? session.user.facultyId);
+    const requestedFacultyId = searchParams.get("facultyId");
+    if (
+      requestedFacultyId &&
+      !canAccessFaculty(guard.user, requestedFacultyId)
+    ) {
+      return forbidden("You cannot access another faculty's forum.");
+    }
+    const facultyId = guard.user.role === "ADMIN"
+      ? requestedFacultyId
+      : guard.user.facultyId;
     const sort = searchParams.get("sort") ?? "newest";
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20)));
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If no module param, return module listing with post counts
-    if (!module) {
+    if (!moduleFilter) {
       const modules = await prisma.forumPost.groupBy({
         by: ["module"],
         where: { facultyId, parentId: null },
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Return paginated top-level posts for a module
-    const where = { module, facultyId, parentId: null };
+    const where = { module: moduleFilter, facultyId, parentId: null };
 
     const orderBy =
       sort === "popular"
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
           },
           _count: { select: { replies: true } },
           votes: {
-            where: { userId: session.user.id },
+            where: { userId: guard.user.id },
             select: { id: true },
           },
         },
@@ -123,13 +124,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const body = await request.json();
     const parsed = createForumPostSchema.safeParse(body);
@@ -142,6 +138,10 @@ export async function POST(request: Request) {
 
     const { module, facultyId, title, body: rawBody, parentId } = parsed.data;
     const postBody = stripHtmlTags(rawBody);
+
+    if (!canAccessFaculty(guard.user, facultyId)) {
+      return forbidden("You cannot post in another faculty's forum.");
+    }
 
     // If reply, verify parent exists in same module
     if (parentId) {
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
         data: {
           module,
           facultyId,
-          authorId: session.user.id,
+          authorId: guard.user.id,
           body: postBody,
           parentId,
         },
@@ -180,12 +180,12 @@ export async function POST(request: Request) {
       });
 
       // Notify parent post author
-      if (parent.authorId !== session.user.id) {
+      if (parent.authorId !== guard.user.id) {
         await createNotification(
           parent.authorId,
           "SYSTEM",
           "New reply to your post",
-          `${session.user.name ?? "Someone"} replied to your forum post.`,
+          `${guard.user.name ?? "Someone"} replied to your forum post.`,
           "FORUM_POST",
           parentId
         );
@@ -206,7 +206,7 @@ export async function POST(request: Request) {
       data: {
         module,
         facultyId,
-        authorId: session.user.id,
+        authorId: guard.user.id,
         title,
         body: postBody,
       },

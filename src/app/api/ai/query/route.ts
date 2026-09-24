@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     // Fetch source content if provided
     const sources = sourceContentIds?.length
-      ? await fetchSourceContent(sourceContentIds)
+      ? await fetchSourceContent(sourceContentIds, session.user)
       : [];
 
     // Build system prompt
@@ -159,12 +159,16 @@ export async function POST(request: Request) {
           controller.close();
         } catch (error) {
           console.error("AI stream error:", error);
-          const message =
-            error instanceof Error ? error.message : "Stream failed";
+          // Never surface raw exception text to the client — it leaked Prisma
+          // error codes and provider internals. Details stay in the server log.
           try {
             controller.enqueue(
               encoder.encode(
-                `data: ${JSON.stringify({ type: "error", message })}\n\n`
+                `data: ${JSON.stringify({
+                  type: "error",
+                  message:
+                    "The assistant could not complete this response. Please try again.",
+                })}\n\n`
               )
             );
           } catch {

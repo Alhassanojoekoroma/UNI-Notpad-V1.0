@@ -5,8 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,11 +143,11 @@ export function LecturerCodes() {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
-          <DialogTrigger asChild>
+          <DialogTrigger render={
             <Button>
               <Plus className="size-4 mr-2" /> Generate New Code
             </Button>
-          </DialogTrigger>
+          } />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>

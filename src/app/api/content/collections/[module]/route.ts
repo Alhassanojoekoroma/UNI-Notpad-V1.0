@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireStudentScope } from "@/lib/rbac";
 
 export async function GET(
   request: Request,
@@ -8,22 +8,26 @@ export async function GET(
 ) {
   try {
     const { module } = await params;
-    const session = await auth();
-    if (!session?.user || session.user.role !== "STUDENT") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireStudentScope();
+    if (!guard.ok) return guard.response;
 
     const { searchParams } = new URL(request.url);
-    const semester = searchParams.get("semester");
+    const requestedSemester = Number(searchParams.get("semester"));
+    if (
+      Number.isFinite(requestedSemester) &&
+      requestedSemester !== guard.user.semester
+    ) {
+      return NextResponse.json(
+        { success: false, error: "This collection is not available to your account." },
+        { status: 403 },
+      );
+    }
 
     const content = await prisma.content.findMany({
       where: {
         module: decodeURIComponent(module),
-        semester: semester ? Number(semester) : session.user.semester || 1,
-        facultyId: session.user.facultyId || undefined,
+        semester: guard.user.semester,
+        facultyId: guard.user.facultyId,
         status: "ACTIVE",
       },
       include: {

@@ -32,13 +32,13 @@ afterAll(async () => {
 /** Helper to seed faculty, program, and users for content tests */
 async function seedContentPrerequisites() {
   const faculty = await testPrisma.faculty.create({
-    data: { id: "fac-1", name: "Engineering", code: "ENG", isActive: true },
+    data: { id: "fac-content", name: "Engineering", code: "ENG_CON", isActive: true },
   });
   const program = await testPrisma.program.create({
     data: {
-      id: "prog-1",
+      id: "prog-content",
       name: "Computer Science",
-      code: "CS",
+      code: "CS_CON",
       facultyId: faculty.id,
       isActive: true,
     },

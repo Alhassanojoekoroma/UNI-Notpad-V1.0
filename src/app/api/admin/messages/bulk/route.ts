@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { bulkMessageSchema } from "@/lib/validators/admin";
 import { createAuditLog } from "@/lib/audit";
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const body = await request.json();
     const data = bulkMessageSchema.parse(body);
@@ -52,7 +46,7 @@ export async function POST(request: Request) {
     if (recipients.length > 0) {
       await prisma.message.createMany({
         data: recipients.map((r) => ({
-          senderId: session.user.id!,
+          senderId: guard.user.id,
           recipientId: r.id,
           subject: data.subject,
           body: data.body,
@@ -70,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action: "bulk_message.sent",
       entityType: "message",
       entityId: "bulk",

@@ -47,10 +47,10 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
+    <div className="flex w-full items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Reset Password</CardTitle>
+          <CardTitle className="text-2xl"><h1>Reset Password</h1></CardTitle>
           <CardDescription>
             {sent
               ? "Check your email for a reset link."

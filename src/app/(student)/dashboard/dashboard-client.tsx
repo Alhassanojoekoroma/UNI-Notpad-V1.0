@@ -1,225 +1,307 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
+import { useState } from "react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  BookOpen,
+  Bot,
+  CalendarClock,
+  CheckCircle2,
+  FileText,
+  MessageSquare,
+} from "lucide-react";
+import type { StudentDashboardData } from "@/lib/dashboard/student-data";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
-interface Task {
-  id: string;
-  code: string;
-  name: string;
-  due: string;
-  badge: string;
-  badgeColor: "bg-r" | "bg-y" | "bg-b" | "bg-g";
-  avatar: { bg: string; text: string; initials: string };
-}
+const badgeVariant = {
+  "bg-r": "destructive",
+  "bg-y": "secondary",
+  "bg-b": "outline",
+  "bg-g": "default",
+} as const;
 
-interface DashboardData {
-  studentName: string;
-  faculty: string;
-  semester: number;
-  unreadMessages: number;
-  upcomingDeadlines: number;
-  nextDeadlineDays: number | null;
-  aiQueriesLeft: number;
-  aiQueriesReset: string;
-  tasks: Task[];
-  activeCourses: Array<{
-    id?: string;
-    name: string;
-    progressPercent: number;
-  }>;
-  weekProgress: Array<{
-    week: string | number;
-    progressPercent: number;
-    participants: Array<{ initials: string }>;
-  }>;
-  enrolledCount: number;
-}
-
-const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
-  "bg-r": { bg: "#fde8e8", color: "#c0392b" },
-  "bg-y": { bg: "#fef9e7", color: "#b7770d" },
-  "bg-g": { bg: "#eafaf1", color: "#1e8449" },
-  "bg-b": { bg: "#e8f4fd", color: "#1a6fa3" },
-};
-
-const TIMELINE_FILL = (pct: number) => pct === 100 ? "#6fcf2e" : pct > 10 ? "#f0c060" : "#333";
-
-export function StudentDashboardClient({ data }: { data: DashboardData }) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+export function StudentDashboardClient({ data }: { data: StudentDashboardData }) {
   const [selectedTaskId, setSelectedTaskId] = useState(data.tasks[0]?.id ?? "");
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted ? resolvedTheme === "dark" : true;
-  const selectedTask = data.tasks.find(t => t.id === selectedTaskId) ?? data.tasks[0];
+  const selectedTask =
+    data.tasks.find((task) => task.id === selectedTaskId) ?? data.tasks[0];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, overflowY: "auto" }}>
-      {/* HEADER - Greeting */}
-      <div style={{ padding: "20px 20px 10px", borderBottom: `1px solid ${isDark ? "#1e1e28" : "#e0e0e0"}` }}>
-        <h1 style={{ fontSize: "26px", fontWeight: 700, color: isDark ? "#fff" : "#000", margin: 0 }}>
-          Good morning, {data.studentName}
-        </h1>
-        <p style={{ fontSize: "13px", color: isDark ? "#666" : "#888", margin: "4px 0 0" }}>
-          {data.faculty} — Semester {data.semester}
-        </p>
-      </div>
-
-      {/* METRICS SECTION */}
-      <div style={{ padding: "12px 20px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(220px, 300px)", gap: "12px" }}>
-        {/* Metrics + Timeline */}
-        <div style={{
-          background: isDark ? "#181820" : "#fff",
-          borderRadius: "12px", padding: "18px",
-          border: isDark ? "none" : "1px solid #e0e0e0"
-        }}>
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-            borderBottom: `1px solid ${isDark ? "#23232e" : "#e0e0e0"}`,
-            paddingBottom: "16px", marginBottom: "16px"
-          }}>
-            <div>
-              <div style={{ fontSize: "10px", color: isDark ? "#666" : "#999", textTransform: "uppercase", marginBottom: "6px" }}>Unread Messages</div>
-              <div style={{ fontSize: "20px", fontWeight: 700, color: isDark ? "#fff" : "#000" }}>{data.unreadMessages}</div>
-              <div style={{ fontSize: "10px", color: isDark ? "#555" : "#aaa", marginTop: "4px" }}>Messages waiting</div>
-            </div>
-            <div style={{ borderLeft: `1px solid ${isDark ? "#23232e" : "#e0e0e0"}`, paddingLeft: "16px" }}>
-              <div style={{ fontSize: "10px", color: isDark ? "#666" : "#999", textTransform: "uppercase", marginBottom: "6px" }}>Upcoming Deadlines</div>
-              <div style={{ fontSize: "20px", fontWeight: 700, color: isDark ? "#fff" : "#000" }}>{data.upcomingDeadlines} tasks</div>
-              <div style={{ fontSize: "10px", color: isDark ? "#555" : "#aaa", marginTop: "4px" }}>
-                Next due in {data.nextDeadlineDays ?? 0} days
-              </div>
-            </div>
-            <div style={{ borderLeft: `1px solid ${isDark ? "#23232e" : "#e0e0e0"}`, paddingLeft: "16px" }}>
-              <div style={{ fontSize: "10px", color: isDark ? "#666" : "#999", textTransform: "uppercase", marginBottom: "6px" }}>AI Queries Left</div>
-              <div style={{ fontSize: "20px", fontWeight: 700, color: isDark ? "#fff" : "#000" }}>{data.aiQueriesLeft}</div>
-              <div style={{ fontSize: "10px", color: isDark ? "#555" : "#aaa", marginTop: "4px" }}>{data.aiQueriesReset}</div>
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
-            {data.weekProgress.slice(0, 4).map((wk, idx) => (
-              <div key={idx}>
-                <div style={{ fontSize: "10px", color: isDark ? "#666" : "#999", marginBottom: "6px" }}>Week {idx + 1}</div>
-                <div style={{ height: "4px", background: isDark ? "#23232e" : "#e0e0e0", borderRadius: "2px", overflow: "hidden" }}>
-                  <div style={{
-                    height: "100%", width: `${wk.progressPercent}%`,
-                    background: TIMELINE_FILL(wk.progressPercent), borderRadius: "2px"
-                  }} />
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="space-y-6 pb-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-primary">Student workspace</p>
+          <h1 className="mt-1 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            Welcome back, {data.studentName}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data.faculty} · Semester {data.semester}
+          </p>
         </div>
-
-        {/* Active Courses */}
-        <div style={{
-          background: isDark ? "#181820" : "#fff",
-          borderRadius: "12px", padding: "16px",
-          border: isDark ? "none" : "1px solid #e0e0e0"
-        }}>
-          <div style={{ fontSize: "10px", color: isDark ? "#666" : "#999", textTransform: "uppercase", marginBottom: "8px" }}>Active Courses</div>
-          <div style={{ fontSize: "18px", fontWeight: 700, color: isDark ? "#fff" : "#000", marginBottom: "12px" }}>
-            {data.enrolledCount} Enrolled
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
-            {data.activeCourses.slice(0, 3).map((course, i) => (
-              <div key={i} style={{
-                background: isDark ? "#1a1a1f" : "#f5f5f5",
-                borderRadius: "10px", padding: "12px",
-                border: `1px solid ${isDark ? "#2a2a36" : "#e0e0e0"}`
-              }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: "#6fcf2e", marginBottom: "4px" }}>
-                  {course.progressPercent}%
-                </div>
-                <div style={{ fontSize: "11px", color: isDark ? "#666" : "#999" }}>{course.name}</div>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => window.location.href = "/content"}
-            style={{
-              width: "100%", background: "#6fcf2e", color: "#0d2200",
-              border: "none", padding: "10px", borderRadius: "8px",
-              fontSize: "12px", fontWeight: 600, cursor: "pointer", marginTop: "12px",
-              transition: "opacity 0.15s",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/content"
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Browse materials →
-          </button>
+            <BookOpen className="size-4" aria-hidden="true" />
+            Find materials
+          </Link>
+          <Link
+            href="/ai"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border bg-background px-4 text-sm font-medium hover:bg-muted"
+          >
+            <Bot className="size-4" aria-hidden="true" />
+            Ask AI
+          </Link>
         </div>
+      </header>
+
+      <section aria-labelledby="attention-heading">
+        <h2 id="attention-heading" className="sr-only">Needs your attention</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <MetricCard
+            icon={MessageSquare}
+            label="Unread messages"
+            value={String(data.unreadMessages)}
+            detail={data.unreadMessages === 1 ? "Message waiting" : "Messages waiting"}
+            href="/messages"
+          />
+          <MetricCard
+            icon={CalendarClock}
+            label="Upcoming deadlines"
+            value={String(data.upcomingDeadlines)}
+            detail={
+              data.nextDeadlineDays === null
+                ? "Nothing due soon"
+                : data.nextDeadlineDays <= 0
+                  ? "Next task is due today"
+                  : `Next task in ${data.nextDeadlineDays} day${data.nextDeadlineDays === 1 ? "" : "s"}`
+            }
+            href="/tasks"
+          />
+          <MetricCard
+            icon={Bot}
+            label="AI queries left"
+            value={String(data.aiQueriesLeft)}
+            detail={data.aiQueriesReset}
+            href="/ai"
+          />
+        </div>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>My courses</CardTitle>
+            <CardDescription>Progress is based on materials you have opened.</CardDescription>
+            <CardAction>
+              <Link href="/content" className="text-sm font-medium text-primary hover:underline">View all</Link>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            {data.activeCourses.length === 0 ? (
+              <EmptyState
+                icon={BookOpen}
+                title="No course materials yet"
+                description="Materials published for your faculty and semester will appear here."
+                href="/content"
+                action="Browse materials"
+              />
+            ) : (
+              <div className="space-y-4">
+                {data.activeCourses.map((course) => (
+                  <div key={`${course.name}-${course.semester}`} className="space-y-2">
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                      <span className="truncate font-medium">{course.name}</span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">{course.progressPercent}%</span>
+                    </div>
+                    <Progress value={course.progressPercent} aria-label={`${course.name} progress`} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Weekly progress</CardTitle>
+            <CardDescription>Materials opened by teaching week.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.weekProgress.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Progress will appear after materials are published.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-2">
+                {data.weekProgress.map((item) => (
+                  <div key={item.week} className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Week {item.week}</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums">{item.progressPercent}%</p>
+                    <Progress className="mt-2" value={item.progressPercent} aria-label={`Week ${item.week} progress`} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* TASKS SECTION */}
-      <div style={{ padding: "12px 20px 20px", flex: 1 }}>
-        <div style={{
-          background: isDark ? "#181820" : "#fff",
-          borderRadius: "12px", border: isDark ? "none" : "1px solid #e0e0e0",
-          display: "grid", gridTemplateColumns: "minmax(180px, 240px) minmax(0, 1fr)", minHeight: "360px", overflow: "hidden"
-        }}>
-          {/* Task List */}
-          <div style={{ borderRight: `1px solid ${isDark ? "#2a2a36" : "#e0e0e0"}`, padding: "14px", overflowY: "auto" }}>
-            {data.tasks.map(task => {
-              const isActive = task.id === selectedTaskId;
-              const badge = BADGE_STYLES[task.badgeColor] ?? BADGE_STYLES["bg-b"];
-              return (
-                <div
-                  key={task.id}
-                  onClick={() => setSelectedTaskId(task.id)}
-                  style={{
-                    display: "flex", gap: "8px", padding: "10px", borderRadius: "8px",
-                    marginBottom: "4px", cursor: "pointer",
-                    background: isActive ? isDark ? "#2a2a36" : "#f0f0f0" : "transparent",
-                    border: `1px solid ${isActive ? isDark ? "#3a3a42" : "#d0d0d0" : "transparent"}`,
-                    transition: "all 0.15s"
-                  }}
-                >
-                  <div style={{
-                    width: "28px", height: "28px", borderRadius: "50%",
-                    background: task.avatar.bg, color: task.avatar.text,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "9px", fontWeight: 600, flexShrink: 0
-                  }}>
-                    {task.avatar.initials}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "11px", fontWeight: 600, color: isDark ? "#fff" : "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {task.code}
-                    </div>
-                    <div style={{ fontSize: "10px", color: isDark ? "#666" : "#999", marginTop: "2px" }}>
-                      {task.due}
-                    </div>
-                  </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tasks</CardTitle>
+            <CardDescription>Your next five tasks, ordered by status and deadline.</CardDescription>
+            <CardAction>
+              <Link href="/tasks" className="text-sm font-medium text-primary hover:underline">Manage</Link>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            {data.tasks.length === 0 ? (
+              <EmptyState
+                icon={CheckCircle2}
+                title="You are all caught up"
+                description="Create a task when you need to remember an assignment or study goal."
+                href="/tasks"
+                action="Create a task"
+              />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div className="space-y-1" role="list" aria-label="Upcoming tasks">
+                  {data.tasks.map((task) => (
+                    <button
+                      key={task.id}
+                      type="button"
+                      onClick={() => setSelectedTaskId(task.id)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        task.id === selectedTask?.id && "bg-muted",
+                      )}
+                      aria-pressed={task.id === selectedTask?.id}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                        {task.avatar.initials}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{task.title}</span>
+                        <span className="block text-xs text-muted-foreground">{task.due}</span>
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+                {selectedTask ? (
+                  <div className="rounded-lg border bg-muted/30 p-4" aria-live="polite">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h3 className="font-medium">{selectedTask.title}</h3>
+                      <Badge variant={badgeVariant[selectedTask.badgeColor]}>{selectedTask.badge}</Badge>
+                    </div>
+                    <p className="mt-3 text-sm text-muted-foreground">{selectedTask.description || "No description provided."}</p>
+                    <p className="mt-4 text-xs font-medium text-muted-foreground">Due {selectedTask.due.toLowerCase()}</p>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Task Detail */}
-          {selectedTask && (
-            <div style={{ padding: "16px", overflowY: "auto" }}>
-              <div style={{ fontSize: "14px", fontWeight: 700, color: isDark ? "#fff" : "#000", marginBottom: "12px" }}>
-                {selectedTask.code} <span style={{
-                  fontSize: "10px", fontWeight: 600, padding: "2px 8px",
-                  borderRadius: "6px", background: BADGE_STYLES[selectedTask.badgeColor]?.bg,
-                  color: BADGE_STYLES[selectedTask.badgeColor]?.color, marginLeft: "8px"
-                }}>{selectedTask.badge}</span>
-              </div>
-              <div style={{ fontSize: "12px", color: isDark ? "#666" : "#999", lineHeight: 1.6 }}>
-                <p><strong>Module:</strong> {selectedTask.name}</p>
-                <p><strong>Due:</strong> {selectedTask.due}</p>
-              </div>
-            </div>
-          )}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent materials</CardTitle>
+            <CardDescription>Latest resources for your faculty and semester.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.recentMaterials.length === 0 ? (
+              <EmptyState
+                icon={FileText}
+                title="No materials available"
+                description="New resources from your lecturers will appear here."
+                href="/content"
+                action="Open course materials"
+              />
+            ) : (
+              <ul className="divide-y">
+                {data.recentMaterials.map((material) => (
+                  <li key={material.id}>
+                    <Link href={`/content/${material.id}`} className="flex items-center gap-3 py-3 hover:text-primary">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted">
+                        <FileText className="size-4" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{material.title}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{material.module} · Week {material.week}</span>
+                      </span>
+                      <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
+    </div>
+  );
+}
+
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  href,
+}: {
+  icon: typeof MessageSquare;
+  label: string;
+  value: string;
+  detail: string;
+  href: string;
+}) {
+  return (
+    <Link href={href} className="group rounded-xl bg-card p-4 ring-1 ring-foreground/10 hover:bg-muted/50">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+        </div>
+        <span className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="size-4" aria-hidden="true" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  href,
+  action,
+}: {
+  icon: typeof BookOpen;
+  title: string;
+  description: string;
+  href: string;
+  action: string;
+}) {
+  return (
+    <div className="flex flex-col items-center rounded-lg border border-dashed px-4 py-8 text-center">
+      <span className="grid size-10 place-items-center rounded-full bg-muted">
+        <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+      </span>
+      <h3 className="mt-3 text-sm font-medium">{title}</h3>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+      <Link href={href} className="mt-4 text-sm font-medium text-primary hover:underline">{action}</Link>
     </div>
   );
 }

@@ -182,7 +182,8 @@ describe("setupWizardSchema", () => {
   });
 
   it("rejects missing required API keys", () => {
-    const { geminiApiKey, ...incomplete } = validSetup;
+    const incomplete: Partial<typeof validSetup> = { ...validSetup };
+    delete incomplete.geminiApiKey;
     const result = setupWizardSchema.safeParse(incomplete);
     expect(result.success).toBe(false);
   });

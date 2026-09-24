@@ -94,7 +94,7 @@ function Html5Player({ audioBase64 }: { audioBase64: string }) {
     setPlaying(!playing);
   };
 
-  const handleSeek = (value: number | readonly number[], _eventDetails: unknown) => {
+  const handleSeek = (value: number | readonly number[]) => {
     const time = Array.isArray(value) ? value[0] : value;
     const audio = audioRef.current;
     if (audio) {
@@ -163,10 +163,10 @@ function SpeechPlayer({ script }: { script: string }) {
     const loadVoices = () => {
       const available = window.speechSynthesis.getVoices();
       setVoices(available);
-      if (available.length > 0 && !selectedVoice) {
+      if (available.length > 0) {
         const defaultVoice =
           available.find((v) => v.default) ?? available[0];
-        setSelectedVoice(defaultVoice.name);
+        setSelectedVoice((current) => current || defaultVoice.name);
       }
     };
 

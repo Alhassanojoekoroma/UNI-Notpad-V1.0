@@ -26,6 +26,23 @@ export async function POST(
       );
     }
 
+    if (
+      message.senderId !== session.user.id &&
+      message.recipientId !== session.user.id
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Message not found" },
+        { status: 404 },
+      );
+    }
+
+    if (message.senderId === session.user.id) {
+      return NextResponse.json(
+        { success: false, error: "You cannot report your own message" },
+        { status: 400 },
+      );
+    }
+
     const body = await request.json();
     const parsed = reportMessageSchema.safeParse(body);
 

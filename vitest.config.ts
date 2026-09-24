@@ -7,7 +7,10 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./tests/helpers/setup.ts"],
-    include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
+    include: [
+      "tests/unit/**/*.test.ts",
+      ...(process.env.DATABASE_URL_TEST ? ["tests/integration/**/*.test.ts"] : []),
+    ],
     exclude: ["tests/e2e/**"],
     pool: "forks",
     fileParallelism: false, // integration tests share a DB — avoid deadlocks

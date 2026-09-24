@@ -1,22 +1,31 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessFaculty, forbidden, requireUser } from "@/lib/rbac";
 
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const { id: postId } = await params;
-    const userId = session.user.id;
+    const userId = guard.user.id;
+
+    const targetPost = await prisma.forumPost.findUnique({
+      where: { id: postId },
+      select: { facultyId: true },
+    });
+    if (!targetPost) {
+      return NextResponse.json(
+        { success: false, error: "Post not found" },
+        { status: 404 },
+      );
+    }
+    if (!canAccessFaculty(guard.user, targetPost.facultyId)) {
+      return forbidden("You cannot vote in another faculty's forum.");
+    }
 
     const existing = await prisma.forumVote.findUnique({
       where: { postId_userId: { postId, userId } },

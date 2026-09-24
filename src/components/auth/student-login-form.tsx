@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, signOut, getSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,11 @@ function FacebookIcon() {
   );
 }
 
-export function StudentLoginForm() {
+interface StudentLoginFormProps {
+  oauthProviders: { google: boolean; facebook: boolean };
+}
+
+export function StudentLoginForm({ oauthProviders }: StudentLoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -76,24 +80,16 @@ export function StudentLoginForm() {
       const result = await signIn("credentials", {
         email,
         password,
+        portal: "STUDENT",
         redirect: false,
       });
 
-      if (result?.error) {
+      if (!result?.ok || result.error) {
         setError("Invalid email or password");
         return;
       }
 
-      const session = await getSession();
-      if (session?.user?.role !== "STUDENT") {
-        await signOut({ redirect: false });
-        setError(
-          "This account isn't a student account — use the admin or lecturer portal."
-        );
-        return;
-      }
-
-      router.push("/dashboard");
+      router.replace("/dashboard");
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -113,61 +109,75 @@ export function StudentLoginForm() {
   }
 
   const busy = isLoading || oauthLoading !== null;
+  const hasOAuth = oauthProviders.google || oauthProviders.facebook;
 
   return (
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="text-center pb-2">
         {/* Logo mark */}
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#5e41e4]">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
         </div>
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
+        <CardTitle className="text-2xl"><h1>Welcome back</h1></CardTitle>
         <CardDescription>Sign in to continue to UniNotepad</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-5">
-        {/* OAuth buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            className="flex items-center justify-center gap-2 font-medium"
-            onClick={() => handleOAuth("google")}
-            disabled={busy}
-            id="btn-sign-in-google"
-          >
-            {oauthLoading === "google" ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <GoogleIcon />
-            )}
-            Google
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="flex items-center justify-center gap-2 font-medium"
-            onClick={() => handleOAuth("facebook")}
-            disabled={busy}
-            id="btn-sign-in-facebook"
-          >
-            {oauthLoading === "facebook" ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <FacebookIcon />
-            )}
-            Facebook
-          </Button>
-        </div>
+        {hasOAuth && (
+          <>
+            <div
+              className={
+                oauthProviders.google && oauthProviders.facebook
+                  ? "grid grid-cols-2 gap-3"
+                  : "grid gap-3"
+              }
+            >
+              {oauthProviders.google && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex items-center justify-center gap-2 font-medium"
+                  onClick={() => handleOAuth("google")}
+                  disabled={busy}
+                  id="btn-sign-in-google"
+                >
+                  {oauthLoading === "google" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <GoogleIcon />
+                  )}
+                  Google
+                </Button>
+              )}
+              {oauthProviders.facebook && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex items-center justify-center gap-2 font-medium"
+                  onClick={() => handleOAuth("facebook")}
+                  disabled={busy}
+                  id="btn-sign-in-facebook"
+                >
+                  {oauthLoading === "facebook" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <FacebookIcon />
+                  )}
+                  Facebook
+                </Button>
+              )}
+            </div>
 
-        <div className="relative">
-          <Separator />
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-            or sign in with email
-          </span>
-        </div>
+            <div className="relative">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                or sign in with email
+              </span>
+            </div>
+          </>
+        )}
 
         {/* Credentials form */}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -213,20 +223,21 @@ export function StudentLoginForm() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                tabIndex={-1}
                 disabled={busy}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
               >
                 {showPassword ? (
-                  <EyeOff className="size-4" />
+                  <EyeOff className="size-4" aria-hidden="true" />
                 ) : (
-                  <Eye className="size-4" />
+                  <Eye className="size-4" aria-hidden="true" />
                 )}
               </button>
             </div>
           </div>
           <Button
             type="submit"
-            className="w-full bg-[#5e41e4] hover:opacity-90"
+            className="w-full"
             disabled={busy}
             id="btn-sign-in-email"
           >
@@ -239,7 +250,7 @@ export function StudentLoginForm() {
       <CardFooter className="justify-center pt-0">
         <p className="text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-[#5e41e4] hover:underline">
+          <Link href="/register" className="font-medium text-primary hover:underline">
             Register
           </Link>
         </p>

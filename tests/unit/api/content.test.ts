@@ -89,6 +89,34 @@ describe("GET /api/content", () => {
     expect(json.pagination.totalPages).toBe(2);
     expect(mockPrisma.content.findMany.mock.calls[0][0].skip).toBe(30);
   });
+
+  it("allows administrators to inspect non-active content", async () => {
+    const { auth } = await import("@/lib/auth");
+    const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
+    mockAuth.mockResolvedValueOnce({
+      user: {
+        id: "admin-id",
+        email: "admin@test.com",
+        name: "Admin",
+        role: "ADMIN",
+        facultyId: null,
+        semester: null,
+        image: null,
+      },
+      expires: new Date(Date.now() + 86400000).toISOString(),
+    });
+
+    const { prisma } = await import("@/lib/prisma");
+    const mockPrisma = prisma as any;
+    mockPrisma.content.findMany.mockResolvedValueOnce([]);
+    mockPrisma.content.count.mockResolvedValueOnce(0);
+
+    const { GET } = await import("@/app/api/content/route");
+    const response = await GET(createMockRequest("GET", `${BASE_URL}/api/content`));
+
+    expect(response.status).toBe(200);
+    expect(mockPrisma.content.findMany.mock.calls[0][0].where.status).toBeUndefined();
+  });
 });
 
 // ── GET /api/content/[id] (single) ─────────────────────────────────
@@ -149,6 +177,11 @@ describe("POST /api/content/[id]/rate", () => {
   it("accepts a valid rating", async () => {
     const { prisma } = await import("@/lib/prisma");
     const mockPrisma = prisma as any;
+    mockPrisma.content.findUnique.mockResolvedValueOnce({
+      facultyId: "test-faculty-id",
+      semester: 1,
+      status: "ACTIVE",
+    });
     mockPrisma.contentRating.upsert.mockResolvedValueOnce({});
     mockPrisma.contentRating.aggregate.mockResolvedValueOnce({ _avg: { rating: 4.5 } });
     mockPrisma.content.update.mockResolvedValueOnce({});
@@ -203,7 +236,12 @@ describe("POST /api/content/[id]/flag", () => {
   it("creates a flag with valid reason", async () => {
     const { prisma } = await import("@/lib/prisma");
     const mockPrisma = prisma as any;
-    mockPrisma.content.findUnique.mockResolvedValueOnce({ title: "Some Content" });
+    mockPrisma.content.findUnique.mockResolvedValueOnce({
+      title: "Some Content",
+      facultyId: "test-faculty-id",
+      semester: 1,
+      status: "ACTIVE",
+    });
     mockPrisma.contentFlag.create.mockResolvedValueOnce({ id: "flag-1", reason: "Plagiarism" });
     mockPrisma.user.findMany.mockResolvedValueOnce([]);
 
@@ -244,6 +282,27 @@ describe("POST /api/content/[id]/flag", () => {
     const response = await POST(request, context);
 
     expect(response.status).toBe(401);
+  });
+});
+
+describe("content action scope", () => {
+  it("rejects rating content from another faculty", async () => {
+    const { prisma } = await import("@/lib/prisma");
+    const mockPrisma = prisma as any;
+    mockPrisma.content.findUnique.mockResolvedValueOnce({
+      facultyId: "other-faculty",
+      semester: 1,
+      status: "ACTIVE",
+    });
+
+    const { POST } = await import("@/app/api/content/[id]/rate/route");
+    const response = await POST(
+      createMockRequest("POST", `${BASE_URL}/api/content/content-1/rate`, { rating: 4 }),
+      createMockParams({ id: "content-1" }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(mockPrisma.contentRating.upsert).not.toHaveBeenCalled();
   });
 });
 

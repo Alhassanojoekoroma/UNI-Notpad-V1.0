@@ -3,9 +3,51 @@ import { prisma } from "@/lib/prisma";
 import { setupWizardSchema } from "@/lib/validators/admin";
 import { DEFAULT_PRIVACY_POLICY } from "@/lib/defaults/privacy-policy";
 import bcrypt from "bcryptjs";
+import { timingSafeEqual } from "crypto";
 
+/** Constant-time string comparison that tolerates differing lengths. */
+function timingSafeEqualString(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    // Still burn a comparison so length is not leaked by timing.
+    timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * First-run installation wizard.
+ *
+ * Creating the first ADMIN account and writing every API key is the most
+ * privileged operation in the system, so `isSetupComplete === false` is not a
+ * sufficient gate on its own: between deployment and the operator finishing the
+ * wizard, anyone who found the URL could claim the instance. A `SETUP_TOKEN`
+ * from the server environment must also be presented.
+ */
 export async function POST(request: Request) {
   try {
+    const expectedToken = process.env.SETUP_TOKEN;
+    if (!expectedToken) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Setup is disabled. Set SETUP_TOKEN in the server environment to enable the installation wizard.",
+        },
+        { status: 503 }
+      );
+    }
+
+    const providedToken = request.headers.get("x-setup-token") ?? "";
+    if (!timingSafeEqualString(providedToken, expectedToken)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid setup token" },
+        { status: 403 }
+      );
+    }
+
     // Check if setup is already complete
     const existing = await prisma.appSettings.findUnique({
       where: { id: "default" },
@@ -28,9 +70,12 @@ export async function POST(request: Request) {
       await tx.user.create({
         data: {
           name: data.adminName,
-          email: data.adminEmail,
+          email: data.adminEmail.trim().toLowerCase(),
           password: hashedPassword,
           role: "ADMIN",
+          termsAccepted: true,
+          privacyAccepted: true,
+          tokenBalance: { create: {} },
         },
       });
 

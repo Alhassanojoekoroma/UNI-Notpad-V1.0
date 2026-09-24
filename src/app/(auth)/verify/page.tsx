@@ -19,13 +19,16 @@ function VerifyEmailContent() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     token ? "loading" : "error"
   );
-  const [errorMessage, setErrorMessage] = useState("");
+  const [fetchError, setFetchError] = useState("");
+
+  // Derived, not stored: the missing-token message is a pure function of the
+  // URL, so setting it from an effect only caused an extra render pass.
+  const errorMessage = token
+    ? fetchError
+    : "No verification token provided.";
 
   useEffect(() => {
-    if (!token) {
-      setErrorMessage("No verification token provided.");
-      return;
-    }
+    if (!token) return;
 
     fetch("/api/auth/verify", {
       method: "POST",
@@ -41,14 +44,14 @@ function VerifyEmailContent() {
       })
       .catch((err) => {
         setStatus("error");
-        setErrorMessage(err.message || "Verification failed");
+        setFetchError(err.message || "Verification failed");
       });
   }, [token]);
 
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Email Verification</CardTitle>
+        <CardTitle className="text-2xl"><h1>Email Verification</h1></CardTitle>
         <CardDescription>
           {status === "loading" && "Verifying your email address..."}
           {status === "success" && "Your email has been verified!"}
@@ -86,7 +89,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
+    <div className="flex w-full items-center justify-center px-4">
       <Suspense fallback={null}>
         <VerifyEmailContent />
       </Suspense>

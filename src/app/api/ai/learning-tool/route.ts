@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const sources = await fetchSourceContent(sourceContentIds);
+    const sources = await fetchSourceContent(sourceContentIds, session.user);
     if (!sources.length) {
       return NextResponse.json(
         { success: false, error: "No valid source content found" },

@@ -55,7 +55,7 @@ describe("GET /api/forum", () => {
 
     const { GET } = await import("@/app/api/forum/route");
     const request = createMockRequest("GET", `${BASE_URL}/api/forum?module=CS101`);
-    const response = await GET(request);
+    const response = await GET(request as any);
 
     expect(response.status).toBe(401);
   });
@@ -167,7 +167,9 @@ describe("POST /api/forum/[id]/vote", () => {
     const mockPrisma = prisma as any;
     mockPrisma.forumVote.findUnique.mockResolvedValueOnce(null);
     mockPrisma.$transaction.mockResolvedValueOnce([{}, {}]);
-    mockPrisma.forumPost.findUnique.mockResolvedValueOnce({ upvoteCount: 4 });
+    mockPrisma.forumPost.findUnique
+      .mockResolvedValueOnce({ facultyId: "test-faculty-id" })
+      .mockResolvedValueOnce({ upvoteCount: 4 });
 
     const { POST } = await import("@/app/api/forum/[id]/vote/route");
     const request = createMockRequest("POST", `${BASE_URL}/api/forum/post-1/vote`);
@@ -202,7 +204,8 @@ describe("PATCH /api/forum/[id]/accept", () => {
     mockPrisma.forumPost.findUnique.mockResolvedValueOnce({
       id: "reply-1",
       parentId: "post-1",
-      parent: { authorId: "test-user-id" },
+      facultyId: "test-faculty-id",
+      parent: { authorId: "test-user-id", facultyId: "test-faculty-id" },
     });
     mockPrisma.$transaction.mockResolvedValueOnce([{}, {}]);
 
@@ -222,7 +225,8 @@ describe("PATCH /api/forum/[id]/accept", () => {
     mockPrisma.forumPost.findUnique.mockResolvedValueOnce({
       id: "reply-1",
       parentId: "post-1",
-      parent: { authorId: "other-user-id" },
+      facultyId: "test-faculty-id",
+      parent: { authorId: "other-user-id", facultyId: "test-faculty-id" },
     });
 
     const { PATCH } = await import("@/app/api/forum/[id]/accept/route");
@@ -254,6 +258,7 @@ describe("POST /api/forum/[id]/report", () => {
     const mockPrisma = prisma as any;
     mockPrisma.forumPost.findUnique.mockResolvedValueOnce({
       authorId: "other-user-id",
+      facultyId: "test-faculty-id",
     });
     mockPrisma.userReport.create.mockResolvedValueOnce({
       id: "report-1",
@@ -277,6 +282,7 @@ describe("POST /api/forum/[id]/report", () => {
     const mockPrisma = prisma as any;
     mockPrisma.forumPost.findUnique.mockResolvedValueOnce({
       authorId: "test-user-id",
+      facultyId: "test-faculty-id",
     });
 
     const { POST } = await import("@/app/api/forum/[id]/report/route");
@@ -301,6 +307,42 @@ describe("POST /api/forum/[id]/report", () => {
     const response = await POST(request, context);
 
     expect(response.status).toBe(401);
+  });
+});
+
+describe("forum faculty isolation", () => {
+  it("rejects voting on another faculty's post", async () => {
+    const { prisma } = await import("@/lib/prisma");
+    const mockPrisma = prisma as any;
+    mockPrisma.forumPost.findUnique.mockResolvedValueOnce({
+      facultyId: "other-faculty",
+    });
+
+    const { POST } = await import("@/app/api/forum/[id]/vote/route");
+    const response = await POST(
+      createMockRequest("POST", `${BASE_URL}/api/forum/post-1/vote`),
+      createMockParams({ id: "post-1" }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(mockPrisma.forumVote.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects creating a post in another faculty", async () => {
+    const { prisma } = await import("@/lib/prisma");
+    const mockPrisma = prisma as any;
+    const { POST } = await import("@/app/api/forum/route");
+    const response = await POST(
+      createMockRequest("POST", `${BASE_URL}/api/forum`, {
+        module: "Physics",
+        facultyId: "other-faculty",
+        title: "Question",
+        body: "Can somebody explain this topic?",
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(mockPrisma.forumPost.create).not.toHaveBeenCalled();
   });
 });
 

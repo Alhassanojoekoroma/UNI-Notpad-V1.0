@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { userUpdateSchema } from "@/lib/validators/admin";
 import { createAuditLog } from "@/lib/audit";
@@ -9,14 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const { id } = await params;
 
@@ -66,19 +60,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const { id } = await params;
 
     // Prevent admin from changing their own role
-    if (id === session.user.id) {
+    if (id === guard.user.id) {
       return NextResponse.json(
         { success: false, error: "Cannot modify your own account via admin panel" },
         { status: 400 }
@@ -101,7 +89,7 @@ export async function PATCH(
     if (data.isActive === false) action = "user.deactivated";
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action,
       entityType: "user",
       entityId: id,
@@ -129,19 +117,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const { id } = await params;
 
     // Prevent self-deletion
-    if (id === session.user.id) {
+    if (id === guard.user.id) {
       return NextResponse.json(
         { success: false, error: "Cannot delete your own account" },
         { status: 400 }
@@ -154,7 +136,7 @@ export async function DELETE(
     });
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action: "user.deleted",
       entityType: "user",
       entityId: id,

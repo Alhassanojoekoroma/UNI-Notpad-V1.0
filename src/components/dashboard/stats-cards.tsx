@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Clock, Bot, BarChart3 } from "lucide-react";
+import { MessageSquare, Clock, Bot } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type DashboardStats = {

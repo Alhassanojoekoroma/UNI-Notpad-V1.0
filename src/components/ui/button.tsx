@@ -52,12 +52,10 @@ function Button({
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   if (render && typeof render !== "function") {
-    const {
-      disabled: _disabled,
-      focusableWhenDisabled: _fwd,
-      nativeButton: _nb,
-      ...elementProps
-    } = props as Record<string, unknown>
+    const elementProps = { ...(props as Record<string, unknown>) }
+    delete elementProps.disabled
+    delete elementProps.focusableWhenDisabled
+    delete elementProps.nativeButton
     return cloneElement(render as ReactElement<Record<string, unknown>>, {
       "data-slot": "button",
       className: cn(buttonVariants({ variant, size, className })),

@@ -29,10 +29,22 @@ export async function GET() {
         role: true,
         createdAt: true,
         deletedAt: true,
+        password: true,
       },
     });
 
-    return NextResponse.json({ success: true, data: user });
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 },
+      );
+    }
+
+    const { password, ...safeUser } = user;
+    return NextResponse.json({
+      success: true,
+      data: { ...safeUser, hasPassword: !!password },
+    });
   } catch (error) {
     console.error("Profile fetch error:", error);
     return NextResponse.json(

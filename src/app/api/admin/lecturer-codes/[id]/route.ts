@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
 
@@ -8,14 +8,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const { id } = await params;
 
@@ -25,7 +19,7 @@ export async function DELETE(
     });
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action: "lecturer_code.revoked",
       entityType: "lecturer_code",
       entityId: id,

@@ -1,6 +1,6 @@
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_THEME, isValidHexColor, ThemeColors } from "@/lib/theme.config";
+import { DEFAULT_THEME, ThemeColors } from "@/lib/theme.config";
 import { z } from "zod";
 
 /**
@@ -25,17 +25,8 @@ const ThemeUpdateSchema = z.object({
  */
 export async function GET() {
   try {
-    const session = await auth();
-
-    // Check if user is authenticated
-    if (!session?.user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if user is admin
-    if (session.user.role !== "ADMIN") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     // Get current theme from settings
     const settings = await prisma.adminSettings.findFirst();
@@ -61,17 +52,8 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    // Check if user is authenticated
-    if (!session?.user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if user is admin
-    if (session.user.role !== "ADMIN") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const body = await request.json();
 
@@ -107,7 +89,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return Response.json(
-        { error: "Invalid colors", details: error.issues },
+        { error: "Invalid colors" },
         { status: 400 }
       );
     }

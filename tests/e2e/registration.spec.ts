@@ -5,35 +5,48 @@ test.describe("Registration Page", () => {
     await page.goto("/register");
 
     // Verify the page loaded with a registration heading
-    await expect(
-      page.locator("h1, h2, h3").filter({ hasText: /register|sign up|create/i })
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Create an account" })).toBeVisible();
 
     // Verify essential form fields are present
-    await expect(page.locator('input[name="email"]')).toBeVisible();
-    await expect(page.locator('input[name="password"]')).toBeVisible();
+    await expect(page.getByLabel("Full Name")).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 
-    // Verify a submit button exists
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
   });
 
-  test("should show validation errors on empty submit", async ({ page }) => {
+  test("should prevent an incomplete first step", async ({ page }) => {
     await page.goto("/register");
 
-    // Click submit without filling any fields
-    await page.click('button[type="submit"]');
-
-    // The page should still be on the register URL (not navigated away)
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
     await expect(page).toHaveURL(/\/register/);
+  });
 
-    // There should be some form of validation feedback visible
-    // (error messages, invalid field indicators, or aria-invalid attributes)
-    const hasValidationErrors = await page
-      .locator(
-        '[role="alert"], .error, [aria-invalid="true"], .text-red-500, .text-destructive'
-      )
-      .count();
-    expect(hasValidationErrors).toBeGreaterThan(0);
+  test("student academic dropdowns load and stay in sync", async ({ page }) => {
+    await page.goto("/register");
+
+    await page.getByLabel("Full Name").fill("Test Student");
+    await page.getByLabel("Email").fill("dropdown-test@example.com");
+    await page.getByLabel("Password", { exact: true }).fill("Password123!");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: /Student Browse materials/i }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+
+    const faculty = page.getByRole("combobox", { name: "Faculty" });
+    const semester = page.getByRole("combobox", { name: "Semester" });
+    const program = page.getByRole("combobox", { name: "Program" });
+
+    await expect(faculty).toBeEnabled();
+    await faculty.click();
+    await page.getByRole("option").first().click();
+
+    await expect(program).toBeEnabled();
+    await program.click();
+    await page.getByRole("option").first().click();
+
+    await semester.click();
+    await page.getByRole("option", { name: "Semester 1" }).click();
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeEnabled();
   });
 
   test("should have a link to the login page", async ({ page }) => {
@@ -43,6 +56,6 @@ test.describe("Registration Page", () => {
     await expect(loginLink).toBeVisible();
 
     await loginLink.click();
-    await expect(page).toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
   });
 });

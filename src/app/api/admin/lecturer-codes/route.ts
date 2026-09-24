@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { lecturerCodeSchema } from "@/lib/validators/admin";
 import { createAuditLog } from "@/lib/audit";
@@ -8,14 +8,8 @@ import crypto from "crypto";
 
 export async function GET() {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const codes = await prisma.lecturerCode.findMany({
       orderBy: { createdAt: "desc" },
@@ -48,14 +42,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const body = await request.json();
     const data = lecturerCodeSchema.parse(body);
@@ -69,12 +57,12 @@ export async function POST(request: Request) {
         code: hashedCode,
         lecturerName: data.lecturerName,
         facultyId: data.facultyId || null,
-        createdBy: session.user.id!,
+        createdBy: guard.user.id,
       },
     });
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action: "lecturer_code.created",
       entityType: "lecturer_code",
       entityId: code.id,

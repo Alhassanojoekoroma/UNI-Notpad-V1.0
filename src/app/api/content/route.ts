@@ -1,31 +1,40 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { contentScopeFilter, requireUser } from "@/lib/rbac";
+
+const PAGE_SIZE = 30;
+
+const SORTS: Record<string, Prisma.ContentOrderByWithRelationInput> = {
+  views: { viewCount: "desc" },
+  downloads: { downloadCount: "desc" },
+  newest: { createdAt: "desc" },
+};
 
 export async function GET(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
-    const module = searchParams.get("module");
+    const moduleFilter = searchParams.get("module");
     const contentType = searchParams.get("contentType");
     const sort = searchParams.get("sort") ?? "newest";
-    const page = Math.max(1, Number(searchParams.get("page") ?? 1));
-    const pageSize = 30;
+    const page = Math.max(1, Number(searchParams.get("page") ?? 1) || 1);
 
-    // Faculty/semester isolation — enforced server-side
-    const where: Record<string, unknown> = {
-      facultyId: session.user.facultyId,
-      semester: session.user.semester,
-      status: "ACTIVE",
+    // Faculty/semester isolation comes from the shared RBAC filter.
+    //
+    // This used to read `where.facultyId = session.user.facultyId` directly.
+    // When that claim was null, Prisma dropped the key entirely and the query
+    // returned every faculty's content instead of none — a silent isolation
+    // failure for any user without a resolved faculty.
+    const where: Prisma.ContentWhereInput = {
+      ...(contentScopeFilter(guard.user) as Prisma.ContentWhereInput),
     };
+
+    // Admins see all statuses; everyone else only active material.
+    if (guard.user.role !== "ADMIN") where.status = "ACTIVE";
 
     if (search) {
       where.OR = [
@@ -33,15 +42,10 @@ export async function GET(request: Request) {
         { module: { contains: search, mode: "insensitive" } },
       ];
     }
-    if (module) where.module = module;
-    if (contentType) where.contentType = contentType;
-
-    const orderBy: Record<string, string> =
-      sort === "views"
-        ? { viewCount: "desc" }
-        : sort === "downloads"
-          ? { downloadCount: "desc" }
-          : { createdAt: "desc" };
+    if (moduleFilter) where.module = moduleFilter;
+    if (contentType) {
+      where.contentType = contentType as Prisma.ContentWhereInput["contentType"];
+    }
 
     const [content, total] = await Promise.all([
       prisma.content.findMany({
@@ -50,9 +54,9 @@ export async function GET(request: Request) {
           faculty: { select: { name: true } },
           lecturer: { select: { id: true, name: true, avatarUrl: true } },
         },
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        orderBy: SORTS[sort] ?? SORTS.newest,
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
       }),
       prisma.content.count({ where }),
     ]);
@@ -62,16 +66,16 @@ export async function GET(request: Request) {
       data: content,
       pagination: {
         page,
-        pageSize,
+        pageSize: PAGE_SIZE,
         total,
-        totalPages: Math.ceil(total / pageSize),
+        totalPages: Math.ceil(total / PAGE_SIZE),
       },
     });
   } catch (error) {
     console.error("Content fetch error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

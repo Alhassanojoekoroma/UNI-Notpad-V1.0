@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -66,11 +67,13 @@ export function FileViewer({
       lowerFileType === "png"
     ) {
       return (
-        <img
-          src={fileUrl}
-          alt={fileName}
-          className="w-full h-full object-contain"
-        />
+        <Image
+            src={fileUrl}
+            alt={fileName}
+            fill
+            sizes="(max-width: 1024px) 100vw, 896px"
+            className="object-contain"
+          />
       );
     }
 
@@ -111,7 +114,7 @@ export function FileViewer({
         </div>
 
         {/* Viewer */}
-        <div className="flex-1 overflow-hidden bg-muted/20">
+        <div className="relative flex-1 overflow-hidden bg-muted/20">
           {getViewerContent()}
         </div>
 

@@ -13,6 +13,7 @@ interface Material {
   fileUrl: string;
   fileType: string;
   contentType: string;
+  status: string;
   week: number;
   lecturer: {
     name: string;
@@ -34,7 +35,9 @@ export default function CollectionPage({
   
   // Parse slug: "module-semester" format
   const lastDashIndex = slug.lastIndexOf("-");
-  const module = slug.substring(0, lastDashIndex);
+  // Named `moduleName` rather than `module`: assigning to `module` shadows the
+  // CommonJS global, which Next flags as a build hazard.
+  const moduleName = slug.substring(0, lastDashIndex);
   const semester = slug.substring(lastDashIndex + 1);
 
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -43,44 +46,47 @@ export default function CollectionPage({
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    fetchMaterials();
-  }, []);
+    const controller = new AbortController();
 
-  const fetchMaterials = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/content/collections/${encodeURIComponent(module)}?semester=${semester}`
-      );
-      const data = await response.json();
+    async function fetchMaterials() {
+      try {
+        setIsLoading(true);
+        const response = await fetch(
+          `/api/content/collections/${encodeURIComponent(moduleName)}?semester=${semester}`,
+          { signal: controller.signal },
+        );
+        const data = await response.json();
 
-      if (data.success && data.data) {
-        // Filter only approved materials (status ACTIVE)
-        const approved = data.data.filter((m: any) => m.status === "ACTIVE");
-        setMaterials(approved);
+        if (data.success && data.data) {
+          const approved = (data.data as Material[]).filter(
+            (material) => material.status === "ACTIVE",
+          );
+          setMaterials(approved);
 
-        // Group by week
-        const grouped: GroupedMaterials = {};
-        approved.forEach((material: Material) => {
-          const week = material.week || 1;
-          if (!grouped[week]) {
-            grouped[week] = [];
-          }
-          grouped[week].push(material);
-        });
+          const grouped: GroupedMaterials = {};
+          approved.forEach((material) => {
+            const week = material.week || 1;
+            if (!grouped[week]) grouped[week] = [];
+            grouped[week].push(material);
+          });
 
-        setGroupedMaterials(grouped);
-
-        // Expand all weeks by default
-        const allWeeks = new Set(Object.keys(grouped).map(Number));
-        setExpandedWeeks(allWeeks);
+          setGroupedMaterials(grouped);
+          setExpandedWeeks(new Set(Object.keys(grouped).map(Number)));
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to fetch materials:", error);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
-    } catch (error) {
-      console.error("Failed to fetch materials:", error);
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    void fetchMaterials();
+    return () => controller.abort();
+  }, [moduleName, semester]);
 
   const toggleWeek = (week: number) => {
     setExpandedWeeks((prev) => {
@@ -110,7 +116,7 @@ export default function CollectionPage({
           <ArrowLeft className="mr-2 w-4 h-4" />
           Back to Materials
         </Button>
-        <h1 className="text-3xl font-bold text-foreground">{module}</h1>
+        <h1 className="text-3xl font-bold text-foreground">{moduleName}</h1>
         <p className="text-muted-foreground mt-2">
           Semester {semester}
         </p>

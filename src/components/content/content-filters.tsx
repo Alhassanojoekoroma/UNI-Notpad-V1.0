@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { CONTENT_TYPE_LABELS } from "@/lib/constants";
-import type { ContentType } from "@prisma/client";
 
 type ContentFiltersProps = {
   search: string;

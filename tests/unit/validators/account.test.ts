@@ -12,14 +12,15 @@ describe("deleteAccountSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects empty password", () => {
+  it("accepts an empty password for OAuth-only accounts", () => {
     const result = deleteAccountSchema.safeParse({ password: "" });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
-  it("rejects missing password", () => {
+  it("defaults a missing password for OAuth-only accounts", () => {
     const result = deleteAccountSchema.safeParse({});
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.password).toBe("");
   });
 
   it("rejects reason over 500 characters", () => {

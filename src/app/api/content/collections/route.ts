@@ -1,29 +1,26 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireStudentScope } from "@/lib/rbac";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user || session.user.role !== "STUDENT") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireStudentScope();
+    if (!guard.ok) return guard.response;
 
     // Get all content visible to this student (matching their faculty/semester)
     const content = await prisma.content.findMany({
       where: {
-        facultyId: session.user.facultyId || undefined,
-        semester: {
-          in: [session.user.semester || 1],
-        },
+        facultyId: guard.user.facultyId,
+        semester: guard.user.semester,
         status: "ACTIVE",
       },
       include: {
         faculty: { select: { name: true } },
         program: { select: { name: true } },
+        access: {
+          where: { userId: guard.user.id },
+          select: { contentId: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -36,6 +33,7 @@ export async function GET(request: Request) {
         module: string;
         category: string;
         materialCount: number;
+        accessedCount: number;
         semester: number;
         materials: typeof content;
       }
@@ -49,12 +47,14 @@ export async function GET(request: Request) {
           module: item.module,
           category: item.contentType.toLowerCase(),
           materialCount: 0,
+          accessedCount: 0,
           semester: item.semester,
           materials: [],
         });
       }
       const collection = collections.get(key)!;
       collection.materialCount++;
+      if (item.access.length > 0) collection.accessedCount++;
       collection.materials.push(item);
     });
 
@@ -63,6 +63,7 @@ export async function GET(request: Request) {
       module: col.module,
       category: col.category,
       materialCount: col.materialCount,
+      progress: Math.round((col.accessedCount / col.materialCount) * 100),
       semester: col.semester,
     }));
 

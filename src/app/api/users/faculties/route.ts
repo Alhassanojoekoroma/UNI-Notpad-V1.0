@@ -10,7 +10,7 @@ export async function GET() {
         select: { id: true, name: true, code: true },
       }),
       prisma.program.findMany({
-        where: { isActive: true },
+        where: { isActive: true, faculty: { isActive: true } },
         orderBy: { name: "asc" },
         select: { id: true, name: true, code: true, facultyId: true },
       }),

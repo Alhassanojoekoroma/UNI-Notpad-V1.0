@@ -22,6 +22,20 @@ import {
 
 export type UserRole = "STUDENT" | "LECTURER" | "ADMIN";
 
+/**
+ * Navigation is the contract between the sidebar and the router: every `href`
+ * here must resolve to a real page, and every reachable page should be listed.
+ *
+ * Assessments and Attendance were removed because the pages behind them called
+ * `/api/lecturer/assessments`, `/api/lecturer/attendance` and
+ * `/api/lecturer/modules`, none of which existed — and no Assessment or
+ * Attendance model exists in the schema either. `tests/unit/lib/navigation.test.ts`
+ * now guards this invariant.
+ *
+ * Hiding an item here is presentation, never authorisation: the API enforces
+ * roles independently.
+ */
+
 export interface NavItem {
   id: string;
   title: string;
@@ -93,6 +107,27 @@ export const STUDENT_NAV: NavItem[] = [
     description: "Track progress",
   },
   {
+    id: "notifications",
+    title: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+    description: "Your notifications",
+  },
+  {
+    id: "tokens",
+    title: "AI Tokens",
+    href: "/tokens",
+    icon: Coins,
+    description: "Balance and usage",
+  },
+  {
+    id: "referrals",
+    title: "Referrals",
+    href: "/referrals",
+    icon: Share2,
+    description: "Invite classmates",
+  },
+  {
     id: "settings",
     title: "Settings",
     href: "/settings",
@@ -135,13 +170,6 @@ export const LECTURER_NAV: NavItem[] = [
     description: "View analytics",
   },
   {
-    id: "assessments",
-    title: "Assessments",
-    href: "/assessments",
-    icon: FileText,
-    description: "Create assessments",
-  },
-  {
     id: "messages",
     title: "Messages",
     href: "/messages",
@@ -149,11 +177,11 @@ export const LECTURER_NAV: NavItem[] = [
     description: "Message students",
   },
   {
-    id: "attendance",
-    title: "Attendance",
-    href: "/attendance",
-    icon: CheckSquare,
-    description: "Track attendance",
+    id: "notifications",
+    title: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+    description: "Your notifications",
   },
   {
     id: "settings",
@@ -210,6 +238,20 @@ export const ADMIN_NAV: NavItem[] = [
     href: "/codes",
     icon: Code2,
     description: "Lecturer codes",
+  },
+  {
+    id: "reports",
+    title: "Reports",
+    href: "/reports",
+    icon: FileText,
+    description: "User reports",
+  },
+  {
+    id: "notifications",
+    title: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+    description: "Your notifications",
   },
   {
     id: "settings",

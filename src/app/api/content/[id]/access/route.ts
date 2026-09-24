@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessContent, forbidden, requireUser } from "@/lib/rbac";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const { id } = await params;
     const { accessType } = await request.json();
@@ -28,7 +23,7 @@ export async function POST(
     // Verify user has permission to access this content
     const content = await prisma.content.findUnique({
       where: { id },
-      select: { facultyId: true, semester: true },
+      select: { facultyId: true, semester: true, status: true },
     });
     if (!content) {
       return NextResponse.json(
@@ -37,28 +32,9 @@ export async function POST(
       );
     }
 
-    // Role-based access control
-    if (session.user.role === "STUDENT") {
-      // Students can only access content from their faculty/semester
-      if (
-        content.facultyId !== session.user.facultyId ||
-        content.semester !== session.user.semester
-      ) {
-        return NextResponse.json(
-          { success: false, error: "Access denied" },
-          { status: 403 }
-        );
-      }
-    } else if (session.user.role === "LECTURER") {
-      // Lecturers can only access content from their faculty
-      if (content.facultyId !== session.user.facultyId) {
-        return NextResponse.json(
-          { success: false, error: "Access denied" },
-          { status: 403 }
-        );
-      }
+    if (!canAccessContent(guard.user, content)) {
+      return forbidden("Access denied");
     }
-    // Admins can access all content
 
     // Rate limiting: Check if user accessed same content with same type in last hour
     // This prevents artificially inflating view/download counts
@@ -66,7 +42,7 @@ export async function POST(
     const recentAccess = await prisma.contentAccess.findFirst({
       where: {
         contentId: id,
-        userId: session.user.id,
+        userId: guard.user.id,
         accessType,
         createdAt: {
           gte: oneHourAgo,
@@ -80,7 +56,7 @@ export async function POST(
         prisma.contentAccess.create({
           data: {
             contentId: id,
-            userId: session.user.id,
+            userId: guard.user.id,
             accessType,
           },
         }),
@@ -97,7 +73,7 @@ export async function POST(
       await prisma.contentAccess.create({
         data: {
           contentId: id,
-          userId: session.user.id,
+          userId: guard.user.id,
           accessType,
         },
       });

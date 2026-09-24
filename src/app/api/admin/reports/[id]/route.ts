@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { reportUpdateSchema } from "@/lib/validators/admin";
 import { createAuditLog } from "@/lib/audit";
@@ -9,14 +9,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("ADMIN");
+    if (!guard.ok) return guard.response;
 
     const { id } = await params;
     const body = await request.json();
@@ -65,13 +59,13 @@ export async function PATCH(
         status: data.status,
         adminNotes: data.adminNotes ?? null,
         actionTaken: data.actionTaken ?? null,
-        reviewedBy: session.user.id!,
+        reviewedBy: guard.user.id,
         resolvedAt: data.status === "RESOLVED" ? new Date() : null,
       },
     });
 
     await createAuditLog({
-      userId: session.user.id!,
+      userId: guard.user.id,
       action: `report.${data.actionTaken?.toLowerCase() ?? "updated"}`,
       entityType: "report",
       entityId: id,

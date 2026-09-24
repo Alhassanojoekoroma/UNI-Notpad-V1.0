@@ -255,12 +255,6 @@ Flag content for admin review. Notifies all admins.
 
 ## AI Study Assistant
 
-### GET `/api/ai`
-
-**Auth**: Public
-
-Health check. Returns `{ status: "ok" }`.
-
 ### GET `/api/ai/status`
 
 **Auth**: Authenticated
@@ -869,29 +863,23 @@ Soft delete (sets status to `"ARCHIVED"`).
 
 ## Webhooks
 
-### GET `/api/webhooks/monime`
+### POST `/api/webhooks/monime`
 
-**Auth**: Public (stub)
+**Auth**: Public; deliberately unavailable
 
-Placeholder. Returns `{ status: "ok" }`.
+Returns HTTP `501`. No event is accepted or processed.
 
-### GET `/api/webhooks/stripe`
+### POST `/api/webhooks/stripe`
 
-**Auth**: Public (stub)
+**Auth**: Public; deliberately unavailable
 
-Placeholder. Returns `{ status: "ok" }`.
+Returns HTTP `501`. No event is accepted or processed.
 
 ---
 
 ## Admin
 
-All admin endpoints (except the health check) require the `ADMIN` role. Write operations are audit-logged.
-
-### GET `/api/admin`
-
-**Auth**: None
-
-Health check. Returns `{ status: "ok" }`.
+All admin endpoints require the `ADMIN` role. Write operations are audit-logged.
 
 ### GET `/api/admin/dashboard`
 

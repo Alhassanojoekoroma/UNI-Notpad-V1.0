@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, ContentType, ContentStatus, Priority, TaskStatus, GoalStatus } from "@prisma/client";
+import { PrismaClient, UserRole, ContentType, Priority, TaskStatus, GoalStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEFAULT_PRIVACY_POLICY } from "../src/lib/defaults/privacy-policy";
 
@@ -7,7 +7,28 @@ const prisma = new PrismaClient();
 const SEED_MODE = process.env.SEED_MODE || "minimal";
 const BCRYPT_ROUNDS = 12;
 
+function requireDemoPassword(name: string) {
+  const value = process.env[name];
+  if (!value || value.length < 12) {
+    throw new Error(`${name} must be set to at least 12 characters.`);
+  }
+  return value;
+}
+
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Demo seeding is disabled when NODE_ENV=production.");
+  }
+  if (process.env.ALLOW_DEMO_SEED !== "true") {
+    throw new Error(
+      "Demo seeding is disabled. Set ALLOW_DEMO_SEED=true only for an isolated development database.",
+    );
+  }
+  if (SEED_MODE !== "minimal" && SEED_MODE !== "full") {
+    throw new Error('SEED_MODE must be either "minimal" or "full".');
+  }
+
+  const adminPasswordValue = requireDemoPassword("DEMO_ADMIN_PASSWORD");
   console.log(`Seeding database (mode: ${SEED_MODE})...\n`);
 
   // --- AppSettings (always created) ---
@@ -38,10 +59,10 @@ async function main() {
 
   // --- Admin user (always created) ---
   console.log("Seeding admin user...");
-  const adminPassword = await bcrypt.hash("Admin123!", BCRYPT_ROUNDS);
+  const adminPassword = await bcrypt.hash(adminPasswordValue, BCRYPT_ROUNDS);
   const admin = await prisma.user.upsert({
     where: { email: "admin@demo.edu" },
-    update: {},
+    update: { password: adminPassword },
     create: {
       name: "Admin User",
       email: "admin@demo.edu",
@@ -55,12 +76,14 @@ async function main() {
 
   if (SEED_MODE === "minimal") {
     console.log("\nMinimal seed complete.");
-    console.log("  Admin login: admin@demo.edu / Admin123!");
+    console.log("  Admin account: admin@demo.edu");
     return;
   }
 
   // ===== FULL SEED MODE =====
   console.log("\nRunning full seed...\n");
+  const lecturerPasswordValue = requireDemoPassword("DEMO_LECTURER_PASSWORD");
+  const studentPasswordValue = requireDemoPassword("DEMO_STUDENT_PASSWORD");
 
   // --- Faculties ---
   console.log("Seeding faculties...");
@@ -114,9 +137,10 @@ async function main() {
   const lecturerCode2Hash = await bcrypt.hash("LECT-FBMG-001", BCRYPT_ROUNDS);
 
   await prisma.lecturerCode.upsert({
-    where: { code: lecturerCode1Hash },
-    update: {},
+    where: { id: "demo-lecturer-code-fict" },
+    update: { code: lecturerCode1Hash },
     create: {
+      id: "demo-lecturer-code-fict",
       code: lecturerCode1Hash,
       lecturerName: "Dr. Amara Kamara",
       facultyId: fict.id,
@@ -125,9 +149,10 @@ async function main() {
   });
 
   await prisma.lecturerCode.upsert({
-    where: { code: lecturerCode2Hash },
-    update: {},
+    where: { id: "demo-lecturer-code-fbmg" },
+    update: { code: lecturerCode2Hash },
     create: {
+      id: "demo-lecturer-code-fbmg",
       code: lecturerCode2Hash,
       lecturerName: "Prof. Fatmata Sesay",
       facultyId: fbmg.id,
@@ -137,11 +162,11 @@ async function main() {
 
   // --- Lecturers ---
   console.log("Seeding lecturers...");
-  const lecturerPassword = await bcrypt.hash("Lecturer123!", BCRYPT_ROUNDS);
+  const lecturerPassword = await bcrypt.hash(lecturerPasswordValue, BCRYPT_ROUNDS);
 
   const lecturer1 = await prisma.user.upsert({
     where: { email: "amara@demo.edu" },
-    update: {},
+    update: { password: lecturerPassword },
     create: {
       name: "Dr. Amara Kamara",
       email: "amara@demo.edu",
@@ -156,7 +181,7 @@ async function main() {
 
   const lecturer2 = await prisma.user.upsert({
     where: { email: "fatmata@demo.edu" },
-    update: {},
+    update: { password: lecturerPassword },
     create: {
       name: "Prof. Fatmata Sesay",
       email: "fatmata@demo.edu",
@@ -171,7 +196,7 @@ async function main() {
 
   // --- Students ---
   console.log("Seeding students...");
-  const studentPassword = await bcrypt.hash("Student123!", BCRYPT_ROUNDS);
+  const studentPassword = await bcrypt.hash(studentPasswordValue, BCRYPT_ROUNDS);
 
   const studentData = [
     { name: "Mohamed Bangura", email: "mohamed@demo.edu", studentId: "905001001", facultyId: fict.id, programId: se.id, semester: 1, referralCode: "MOH-REF" },
@@ -185,7 +210,7 @@ async function main() {
   for (const data of studentData) {
     const student = await prisma.user.upsert({
       where: { email: data.email },
-      update: {},
+      update: { password: studentPassword },
       create: {
         ...data,
         password: studentPassword,
@@ -409,14 +434,9 @@ async function main() {
   });
 
   console.log("\nFull seed complete.");
-  console.log("  Admin:    admin@demo.edu / Admin123!");
-  console.log("  Lecturer: amara@demo.edu / Lecturer123!");
-  console.log("  Lecturer: fatmata@demo.edu / Lecturer123!");
-  console.log("  Student:  mohamed@demo.edu / Student123!");
-  console.log("  Student:  aminata@demo.edu / Student123!");
-  console.log("  Student:  ibrahim@demo.edu / Student123!");
-  console.log("  Student:  mariama@demo.edu / Student123!");
-  console.log("  Student:  abdul@demo.edu / Student123!");
+  console.log("  Admin:    admin@demo.edu");
+  console.log("  Lecturers: amara@demo.edu, fatmata@demo.edu");
+  console.log("  Students: mohamed@demo.edu, aminata@demo.edu, ibrahim@demo.edu, mariama@demo.edu, abdul@demo.edu");
 }
 
 main()

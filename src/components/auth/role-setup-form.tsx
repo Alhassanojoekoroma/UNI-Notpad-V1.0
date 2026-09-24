@@ -48,6 +48,9 @@ export function RoleSetupForm() {
           setFaculties(data.data.faculties);
           setPrograms(data.data.programs);
           if (data.data.maxSemesters) setMaxSemesters(data.data.maxSemesters);
+          if (data.data.faculties.length === 0) {
+            setError("No active faculties are configured yet. Please contact an administrator.");
+          }
         } else {
           setError("Failed to load faculty data. Please refresh the page.");
         }
@@ -71,7 +74,7 @@ export function RoleSetupForm() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentId: studentId || undefined,
+          studentId,
           facultyId,
           semester: Number(semester),
           programId,
@@ -97,7 +100,9 @@ export function RoleSetupForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
+        <CardTitle className="text-2xl">
+          <h1>Complete Your Profile</h1>
+        </CardTitle>
         <CardDescription>
           Select your faculty, semester, and program to get started.
         </CardDescription>
@@ -105,24 +110,30 @@ export function RoleSetupForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <div
+              role="alert"
+              className="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+            >
               {error}
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="setup-studentId">Student ID (optional)</Label>
+            <Label htmlFor="setup-studentId">Student ID</Label>
             <Input
               id="setup-studentId"
+              name="studentId"
               placeholder="e.g. 905001234"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
               disabled={isLoading}
+              autoComplete="off"
+              required
             />
           </div>
           <div className="space-y-2">
             <Label>Faculty</Label>
             <Select 
-              value={facultyId} 
+              value={facultyId || null}
               onValueChange={(v) => {
                 if (v !== null) {
                   setFacultyId(v);
@@ -131,7 +142,7 @@ export function RoleSetupForm() {
               }}
               disabled={isLoadingData || isLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger id="setup-faculty" aria-label="Faculty">
                 <SelectValue placeholder={isLoadingData ? "Loading faculties..." : "Select faculty"} />
               </SelectTrigger>
               <SelectContent>
@@ -146,11 +157,11 @@ export function RoleSetupForm() {
           <div className="space-y-2">
             <Label>Semester</Label>
             <Select 
-              value={semester} 
+              value={semester || null}
               onValueChange={(v) => v !== null && setSemester(v)}
               disabled={isLoadingData || isLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger id="setup-semester" aria-label="Semester">
                 <SelectValue placeholder={isLoadingData ? "Loading semesters..." : "Select semester"} />
               </SelectTrigger>
               <SelectContent>
@@ -167,11 +178,11 @@ export function RoleSetupForm() {
           <div className="space-y-2">
             <Label>Program</Label>
             <Select
-              value={programId}
+              value={programId || null}
               onValueChange={(v) => v !== null && setProgramId(v)}
               disabled={!facultyId || filteredPrograms.length === 0}
             >
-              <SelectTrigger>
+              <SelectTrigger id="setup-program" aria-label="Program">
                 <SelectValue 
                   placeholder={
                     !facultyId 
@@ -194,7 +205,9 @@ export function RoleSetupForm() {
           <Button
             type="submit"
             className="w-full"
-            disabled={!facultyId || !semester || !programId || isLoading}
+            disabled={
+              !studentId.trim() || !facultyId || !semester || !programId || isLoading
+            }
           >
             {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
             Complete Setup

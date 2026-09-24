@@ -1,21 +1,16 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
 import { reportForumPostSchema } from "@/lib/validators/forum";
+import { canAccessFaculty, forbidden, requireUser } from "@/lib/rbac";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireUser();
+    if (!guard.ok) return guard.response;
 
     const { id: postId } = await params;
     const body = await request.json();
@@ -30,7 +25,7 @@ export async function POST(
 
     const post = await prisma.forumPost.findUnique({
       where: { id: postId },
-      select: { authorId: true },
+      select: { authorId: true, facultyId: true },
     });
 
     if (!post) {
@@ -40,7 +35,11 @@ export async function POST(
       );
     }
 
-    if (post.authorId === session.user.id) {
+    if (!canAccessFaculty(guard.user, post.facultyId)) {
+      return forbidden("You cannot report a post from another faculty.");
+    }
+
+    if (post.authorId === guard.user.id) {
       return NextResponse.json(
         { success: false, error: "You cannot report your own post" },
         { status: 400 }
@@ -50,14 +49,14 @@ export async function POST(
     const report = await prisma.userReport.create({
       data: {
         reportedUserId: post.authorId,
-        reporterId: session.user.id,
+        reporterId: guard.user.id,
         reason: parsed.data.reason,
         context: postId,
       },
     });
 
     await createAuditLog({
-      userId: session.user.id,
+      userId: guard.user.id,
       action: "forum.post_reported",
       entityType: "forum_post",
       entityId: postId,

@@ -49,8 +49,11 @@ Edit `.env.local` with your production values. At minimum:
 ```
 DATABASE_URL="postgresql://uninotepad:YOUR_PASSWORD@localhost:5432/uninotepad"
 AUTH_SECRET="generate-a-long-random-string"
+AUTH_TRUST_HOST=true
 NEXTAUTH_URL="https://uninotepad.example.com"
 NEXT_PUBLIC_ROOT_DOMAIN="uninotepad.example.com"
+NEXT_PUBLIC_APP_URL="https://uninotepad.example.com"
+SETUP_TOKEN="generate-a-separate-long-random-string"
 ```
 
 See [configuration.md](configuration.md) for all environment variables.
@@ -84,7 +87,7 @@ After=network.target postgresql.service
 Type=simple
 User=www-data
 WorkingDirectory=/opt/uninotepad
-ExecStart=/usr/bin/node /opt/uninotepad/.next/standalone/server.js
+ExecStart=/usr/bin/pnpm start
 Restart=on-failure
 RestartSec=5
 Environment=NODE_ENV=production
@@ -160,7 +163,9 @@ Caddy gets HTTPS certificates from Let's Encrypt automatically.
 
 ## Step 6: Complete setup
 
-Visit `https://uninotepad.example.com` in your browser and complete the setup wizard to:
+Visit `https://uninotepad.example.com/setup` in your browser and complete the
+setup wizard. The final step requires the exact `SETUP_TOKEN` value from the
+server environment. Rotate or remove that value after setup completes.
 
 1. Create an admin account
 2. Set your university name and branding

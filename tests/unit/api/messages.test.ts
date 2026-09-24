@@ -123,7 +123,7 @@ describe("POST /api/messages", () => {
     const mockPrisma = prisma as any;
     mockPrisma.user.findUnique.mockResolvedValueOnce({ id: "recipient-1" });
     mockPrisma.userBlock.findFirst.mockResolvedValueOnce(null);
-    mockPrisma.message.create.mockResolvedValueOnce({ id: "msg-new", ...MOCK_MESSAGE });
+    mockPrisma.message.create.mockResolvedValueOnce({ ...MOCK_MESSAGE, id: "msg-new" });
 
     const { POST } = await import("@/app/api/messages/route");
     const request = createMockRequest("POST", `${BASE_URL}/api/messages`, {
@@ -270,6 +270,7 @@ describe("POST /api/messages/[id]/report", () => {
     mockPrisma.message.findUnique.mockResolvedValueOnce({
       id: "msg-1",
       senderId: "sender-1",
+      recipientId: "test-user-id",
     });
     mockPrisma.userReport.create.mockResolvedValueOnce({
       id: "report-1",
@@ -297,6 +298,7 @@ describe("POST /api/messages/[id]/report", () => {
     mockPrisma.message.findUnique.mockResolvedValueOnce({
       id: "msg-1",
       senderId: "sender-1",
+      recipientId: "test-user-id",
     });
 
     const { POST } = await import("@/app/api/messages/[id]/report/route");
@@ -319,6 +321,27 @@ describe("POST /api/messages/[id]/report", () => {
     const response = await POST(request, context);
 
     expect(response.status).toBe(401);
+  });
+
+  it("does not let a non-participant report a guessed message id", async () => {
+    const { prisma } = await import("@/lib/prisma");
+    const mockPrisma = prisma as any;
+    mockPrisma.message.findUnique.mockResolvedValueOnce({
+      id: "msg-private",
+      senderId: "sender-1",
+      recipientId: "recipient-1",
+    });
+
+    const { POST } = await import("@/app/api/messages/[id]/report/route");
+    const response = await POST(
+      createMockRequest("POST", `${BASE_URL}/api/messages/msg-private/report`, {
+        reason: "Spam",
+      }),
+      createMockParams({ id: "msg-private" }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(mockPrisma.userReport.create).not.toHaveBeenCalled();
   });
 });
 

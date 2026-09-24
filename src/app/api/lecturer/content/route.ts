@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { cloudinary } from "@/lib/cloudinary";
 import { contentUploadSchema } from "@/lib/validators/content";
-import { createNotification } from "@/lib/notifications";
+import { requireLecturerScope, requireRole } from "@/lib/rbac";
+import { verifyFileType } from "@/lib/file-signature";
 import { MAX_FILE_SIZE, SUPPORTED_FILE_TYPES } from "@/lib/constants";
 
 export async function GET(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user || session.user.role !== "LECTURER") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const guard = await requireRole("LECTURER");
+    if (!guard.ok) return guard.response;
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -23,7 +18,7 @@ export async function GET(request: Request) {
     const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20)));
 
     const where: Record<string, unknown> = {
-      lecturerId: session.user.id,
+      lecturerId: guard.user.id,
     };
 
     if (status && status !== "ALL") {
@@ -72,13 +67,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user || session.user.role !== "LECTURER") {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    // Requires a lecturer who has been assigned a faculty by an administrator.
+    const guard = await requireLecturerScope();
+    if (!guard.ok) return guard.response;
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -107,6 +98,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Read once, then verify the bytes actually match the declared type.
+    // `file.type` is a client-supplied header, so on its own it let any payload
+    // be uploaded as "application/pdf" and served from the university's CDN.
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const verified = verifyFileType(buffer, file.type, file.name);
+    if (!verified.ok) {
+      return NextResponse.json(
+        { success: false, error: verified.error },
+        { status: 400 }
+      );
+    }
+
     // Parse metadata from form data
     const metadata = {
       title: formData.get("title") as string,
@@ -129,25 +132,32 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate lecturer has authority over the target faculty
-    // Lecturers must have a facultyId and can only upload to their assigned faculty
-    if (!session.user.facultyId) {
-      return NextResponse.json(
-        { success: false, error: "Your account is not assigned to any faculty. Please contact your administrator." },
-        { status: 403 }
-      );
-    }
-    
-    if (parsed.data.facultyId !== session.user.facultyId) {
+    // Lecturers may only publish into the faculty an administrator assigned
+    // them. `requireLecturerScope` has already guaranteed a faculty exists.
+    if (parsed.data.facultyId !== guard.user.facultyId) {
       return NextResponse.json(
         { success: false, error: "You can only upload content to your assigned faculty" },
         { status: 403 }
       );
     }
 
-    // Upload file to Cloudinary with better error handling
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // Program, when supplied, must belong to that same faculty.
+    if (parsed.data.programId) {
+      const program = await prisma.program.findFirst({
+        where: {
+          id: parsed.data.programId,
+          facultyId: guard.user.facultyId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (!program) {
+        return NextResponse.json(
+          { success: false, error: "Invalid program for your faculty" },
+          { status: 400 }
+        );
+      }
+    }
 
     const uploadResult = await new Promise<{
       secure_url: string;
@@ -179,24 +189,14 @@ export async function POST(request: Request) {
       upload_stream.end(buffer);
     });
 
-    // Derive file type extension
-    const fileTypeMap: Record<string, string> = {
-      "application/pdf": "pdf",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-        "pptx",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        "docx",
-      "image/jpeg": "jpeg",
-      "image/png": "png",
-    };
-
     const content = await prisma.content.create({
       data: {
         title: parsed.data.title,
         description: parsed.data.description,
         fileUrl: uploadResult.secure_url,
         filePublicId: uploadResult.public_id,
-        fileType: fileTypeMap[file.type] ?? file.type,
+        // Extension comes from the verified signature, not the client header.
+        fileType: verified.extension!,
         fileSize: file.size,
         facultyId: parsed.data.facultyId,
         semester: parsed.data.semester,
@@ -205,12 +205,28 @@ export async function POST(request: Request) {
         module: parsed.data.module,
         moduleCode: parsed.data.moduleCode,
         contentType: parsed.data.contentType,
-        lecturerId: session.user.id,
+        lecturerId: guard.user.id,
         tutorialLink: parsed.data.tutorialLink,
       },
+    }).catch(async (dbError) => {
+      // The upload already succeeded, so a failed insert would strand the file
+      // in Cloudinary forever. Roll it back before rethrowing.
+      await cloudinary.uploader
+        .destroy(uploadResult.public_id, { resource_type: "auto" })
+        .catch((cleanupError) =>
+          console.error(
+            "Failed to clean up orphaned Cloudinary asset",
+            uploadResult.public_id,
+            cleanupError
+          )
+        );
+      throw dbError;
     });
 
-    // Notify active students in matching faculty/semester (exclude suspended/deleted)
+    // Notify active students in the matching faculty/semester.
+    // A single `createMany` replaces one INSERT per student issued through an
+    // unbounded `Promise.all`, which could open thousands of concurrent queries
+    // (and exhaust the Neon pool) on a large faculty.
     const students = await prisma.user.findMany({
       where: {
         role: "STUDENT",
@@ -224,18 +240,17 @@ export async function POST(request: Request) {
     });
 
     if (students.length > 0) {
-      await Promise.all(
-        students.map((s) =>
-          createNotification(
-            s.id,
-            "NEW_CONTENT",
-            "New Content Available",
-            `${session.user.name} uploaded "${parsed.data.title}" in ${parsed.data.module}`,
-            "content",
-            content.id
-          )
-        )
-      );
+      const body = `${guard.user.name ?? "A lecturer"} uploaded "${parsed.data.title}" in ${parsed.data.module}`;
+      await prisma.notification.createMany({
+        data: students.map((s) => ({
+          userId: s.id,
+          type: "NEW_CONTENT" as const,
+          title: "New Content Available",
+          body,
+          referenceType: "content",
+          referenceId: content.id,
+        })),
+      });
     }
 
     return NextResponse.json(
@@ -243,12 +258,11 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
+    // Details stay in the server log — returning `error.message` leaked
+    // Cloudinary and Prisma internals to the client.
     console.error("Content upload error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    const errorStack = error instanceof Error ? error.stack : "";
-    console.error("Full error details:", { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { success: false, error: "Internal server error", details: errorMessage },
+      { success: false, error: "Upload failed. Please try again." },
       { status: 500 }
     );
   }

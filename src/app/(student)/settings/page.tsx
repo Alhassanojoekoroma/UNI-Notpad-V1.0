@@ -154,6 +154,7 @@ export default function StudentSettingsPage() {
             <CardContent>
               <DeleteAccountDialog
                 pendingDeletion={!!profile?.deletedAt}
+                hasPassword={profile?.hasPassword ?? true}
                 onCancelled={() =>
                   queryClient.invalidateQueries({ queryKey: ["profile"] })
                 }

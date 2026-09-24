@@ -106,6 +106,10 @@ export function SetupWizard() {
   const [privacyPolicy, setPrivacyPolicy] = useState("");
   const [codeOfConduct, setCodeOfConduct] = useState("");
 
+  // Proves the operator has server access. Creating the first ADMIN and writing
+  // every API key must not be claimable by whoever reaches the URL first.
+  const [setupToken, setSetupToken] = useState("");
+
   const addFaculty = () => {
     setFaculties([...faculties, { name: "", code: "", programs: [] }]);
   };
@@ -153,7 +157,7 @@ export function SetupWizard() {
         return (
           adminName.trim().length > 0 &&
           adminEmail.trim().length > 0 &&
-          adminPassword.length >= 8
+          adminPassword.length >= 10
         );
       case 2:
         return faculties.some((f) => f.name.trim() && f.code.trim());
@@ -170,7 +174,7 @@ export function SetupWizard() {
       case 5:
         return true;
       case 6:
-        return true;
+        return setupToken.trim().length > 0;
       default:
         return false;
     }
@@ -183,7 +187,10 @@ export function SetupWizard() {
     try {
       const res = await fetch("/api/setup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-setup-token": setupToken.trim(),
+        },
         body: JSON.stringify({
           universityName,
           universityLogo: universityLogo || undefined,
@@ -208,9 +215,9 @@ export function SetupWizard() {
         }),
       });
 
-      const result = await res.json();
+      const result = await res.json().catch(() => ({ success: false }));
 
-      if (!result.success) {
+      if (!res.ok || !result.success) {
         setError(result.error || "Setup failed");
         return;
       }
@@ -642,6 +649,24 @@ export function SetupWizard() {
                   <span className="font-medium">Cloudinary:</span>{" "}
                   {cloudinaryCloudName ? "Configured" : "Missing"}
                 </div>
+              </div>
+
+              <div className="space-y-2 rounded-md border border-dashed p-4">
+                <Label htmlFor="setup-token">Setup token</Label>
+                <Input
+                  id="setup-token"
+                  type="password"
+                  value={setupToken}
+                  onChange={(e) => setSetupToken(e.target.value)}
+                  placeholder="Value of SETUP_TOKEN"
+                  autoComplete="off"
+                  aria-describedby="setup-token-hint"
+                />
+                <p id="setup-token-hint" className="text-xs text-muted-foreground">
+                  Paste the <code>SETUP_TOKEN</code> from your server
+                  environment. This confirms you control the deployment before
+                  the administrator account is created.
+                </p>
               </div>
               {error && (
                 <p className="text-sm text-destructive">{error}</p>

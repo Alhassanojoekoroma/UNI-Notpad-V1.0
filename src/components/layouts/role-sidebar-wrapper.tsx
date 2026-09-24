@@ -25,17 +25,14 @@ export function RoleSidebarWrapper({ role }: { role?: UserRole }) {
     }
   }
 
-  // Only show loading if role wasn't provided and session is still loading
+  // Only show a placeholder if the role wasn't provided and the session is
+  // still resolving. Themed tokens, not hardcoded hex, so it matches in light
+  // mode too.
   if (!role && status === "loading") {
     return (
-      <nav
-        style={{
-          width: "72px",
-          flexShrink: 0,
-          background: "#0d0d12",
-          borderRight: "1px solid #1a1a22",
-          animation: "pulse 2s infinite",
-        }}
+      <div
+        aria-hidden="true"
+        className="hidden h-dvh w-[72px] shrink-0 animate-pulse border-r border-sidebar-border bg-sidebar md:block"
       />
     );
   }

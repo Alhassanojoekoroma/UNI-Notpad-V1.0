@@ -1,5 +1,7 @@
-import { vi, afterEach } from "vitest";
+import { vi, afterEach, beforeEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { resetRateLimits } from "@/lib/rate-limit";
+import { resetStudentIdPatternCache } from "@/lib/student-id";
 
 // ── Mock external services ──────────────────────────────────────────
 
@@ -100,13 +102,14 @@ vi.mock("@/lib/cloudinary", () => ({
   },
 }));
 
-// Resend
+// Resend — the real module builds its client lazily, so a missing API key is a
+// logged warning rather than a construction-time throw.
 vi.mock("@/lib/resend", () => ({
-  resend: {
-    emails: {
-      send: vi.fn().mockResolvedValue({ id: "mock-email-id" }),
-    },
-  },
+  isEmailConfigured: vi.fn().mockResolvedValue(true),
+  // Never throws, mirroring the real helper: a delivery failure must not turn
+  // the forgot-password endpoint into a user-enumeration oracle.
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+  sendEmail: vi.fn().mockResolvedValue(true),
 }));
 
 // ElevenLabs
@@ -138,8 +141,17 @@ vi.mock("bcryptjs", () => ({
   genSalt: vi.fn().mockResolvedValue("$2a$12$mockedsalt"),
 }));
 
-// ── Reset mocks between tests ───────────────────────────────────────
+// ── Reset shared state between tests ────────────────────────────────
+
+// The rate limiter and the student-ID pattern cache are module-level state, so
+// without this a test's counters and cached settings leak into the next one.
+beforeEach(() => {
+  resetRateLimits();
+  resetStudentIdPatternCache();
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
+  resetRateLimits();
+  resetStudentIdPatternCache();
 });

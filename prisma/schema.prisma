@@ -128,6 +128,9 @@ model User {
   emailVerified        DateTime?
   image                String?
   password             String? // bcrypt hash, null for OAuth users
+  // Bumped on every password change so JWTs minted before the change are
+  // rejected at their next revalidation.
+  passwordChangedAt    DateTime?
   role                 UserRole  @default(STUDENT)
   facultyId            String?
   semester             Int?
@@ -152,34 +155,35 @@ model User {
   sessions Session[]
 
   // Application relations
-  faculty              Faculty?          @relation(fields: [facultyId], references: [id])
-  program              Program?          @relation(fields: [programId], references: [id])
-  content              Content[]         @relation("ContentAuthor")
+  faculty              Faculty?           @relation(fields: [facultyId], references: [id])
+  program              Program?           @relation(fields: [programId], references: [id])
+  content              Content[]          @relation("ContentAuthor")
   contentAccess        ContentAccess[]
   contentRatings       ContentRating[]
   aiInteractions       AIInteraction[]
-  sentMessages         Message[]         @relation("MessageSender")
-  receivedMessages     Message[]         @relation("MessageRecipient")
-  blockedUsers         UserBlock[]       @relation("Blocker")
-  blockedBy            UserBlock[]       @relation("Blocked")
+  sentMessages         Message[]          @relation("MessageSender")
+  receivedMessages     Message[]          @relation("MessageRecipient")
+  blockedUsers         UserBlock[]        @relation("Blocker")
+  blockedBy            UserBlock[]        @relation("Blocked")
   tasks                Task[]
-  taskInvitationsSent  TaskInvitation[]  @relation("Inviter")
+  taskInvitationsSent  TaskInvitation[]   @relation("Inviter")
   scheduleEntries      Schedule[]
   tokenBalance         TokenBalance?
   tokenTransactions    TokenTransaction[]
-  referralsMade        Referral[]        @relation("Referrer")
-  referralsReceived    Referral[]        @relation("Referee")
+  referralsMade        Referral[]         @relation("Referrer")
+  referralsReceived    Referral[]         @relation("Referee")
   quizScores           QuizScore[]
   learningGoals        LearningGoal[]
   forumPosts           ForumPost[]
   forumVotes           ForumVote[]
-  contentFlags         ContentFlag[]     @relation("FlagReporter")
-  contentFlagsReviewed ContentFlag[]     @relation("FlagReviewer")
-  userReportsFiled     UserReport[]      @relation("Reporter")
-  userReportsReceived  UserReport[]      @relation("Reported")
-  userReportsReviewed  UserReport[]      @relation("ReportReviewer")
+  contentFlags         ContentFlag[]      @relation("FlagReporter")
+  contentFlagsReviewed ContentFlag[]      @relation("FlagReviewer")
+  userReportsFiled     UserReport[]       @relation("Reporter")
+  userReportsReceived  UserReport[]       @relation("Reported")
+  userReportsReviewed  UserReport[]       @relation("ReportReviewer")
   notifications        Notification[]
   auditLogs            AuditLog[]
+  lecturerCodeUsed     LecturerCode?      @relation("LecturerCodeRedeemer")
 
   @@index([email])
   @@index([role])
@@ -194,10 +198,11 @@ model Faculty {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  programs   Program[]
-  users      User[]
-  content    Content[]
-  forumPosts ForumPost[]
+  programs      Program[]
+  users         User[]
+  content       Content[]
+  forumPosts    ForumPost[]
+  lecturerCodes LecturerCode[]
 }
 
 model Program {
@@ -451,18 +456,18 @@ model LearningGoal {
 }
 
 model ForumPost {
-  id               String      @id @default(cuid())
+  id               String   @id @default(cuid())
   module           String
   facultyId        String
   authorId         String
   title            String? // null for replies
-  body             String      @db.Text
-  isPinned         Boolean     @default(false)
+  body             String   @db.Text
+  isPinned         Boolean  @default(false)
   parentId         String? // null = top-level post, else reply
-  upvoteCount      Int         @default(0)
-  isAcceptedAnswer Boolean     @default(false)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  upvoteCount      Int      @default(0)
+  isAcceptedAnswer Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   faculty Faculty     @relation(fields: [facultyId], references: [id])
   author  User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -551,6 +556,15 @@ model LecturerCode {
   createdBy    String // admin user ID
   createdAt    DateTime  @default(now())
   revokedAt    DateTime?
+  // Single-use redemption. A code that has been redeemed can never mint a
+  // second lecturer account.
+  usedAt       DateTime?
+  usedByUserId String?   @unique
+
+  faculty Faculty? @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  usedBy  User?    @relation("LecturerCodeRedeemer", fields: [usedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([isActive, usedAt])
 }
 
 model AuditLog {
@@ -602,8 +616,8 @@ model AppSettings {
 }
 
 model AdminSettings {
-  id           String @id @default("default")
-  themeColors  Json   @default("{\"primary\":\"#6fcf2e\",\"secondary\":\"#2a4a2a\",\"accent\":\"#90ee90\",\"background\":\"#0d0d12\",\"surface\":\"#181820\",\"text\":\"#ffffff\",\"border\":\"#2a2a36\",\"success\":\"#10b981\",\"warning\":\"#f59e0b\",\"danger\":\"#ef4444\"}")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default("default")
+  themeColors Json     @default("{\"primary\":\"#6fcf2e\",\"secondary\":\"#2a4a2a\",\"accent\":\"#90ee90\",\"background\":\"#0d0d12\",\"surface\":\"#181820\",\"text\":\"#ffffff\",\"border\":\"#2a2a36\",\"success\":\"#10b981\",\"warning\":\"#f59e0b\",\"danger\":\"#ef4444\"}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

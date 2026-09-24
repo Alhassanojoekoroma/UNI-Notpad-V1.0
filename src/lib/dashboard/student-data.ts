@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-interface StudentDashboardData {
+export interface StudentDashboardData {
   studentName: string;
   faculty: string;
   semester: number;
@@ -11,8 +11,8 @@ interface StudentDashboardData {
   aiQueriesReset: string;
   tasks: Array<{
     id: string;
-    code: string;
-    name: string;
+    title: string;
+    description: string | null;
     due: string;
     badge: string;
     badgeColor: "bg-r" | "bg-y" | "bg-b" | "bg-g";
@@ -21,13 +21,19 @@ interface StudentDashboardData {
   activeCourses: Array<{
     progressPercent: number;
     name: string;
+    semester: number;
   }>;
   weekProgress: Array<{
     week: number;
     progressPercent: number;
-    participants: Array<{ initials: string }>;
   }>;
   enrolledCount: number;
+  recentMaterials: Array<{
+    id: string;
+    title: string;
+    module: string;
+    week: number;
+  }>;
 }
 
 export async function getStudentDashboardData(
@@ -49,15 +55,45 @@ export async function getStudentDashboardData(
     throw new Error("User not found or is not a student");
   }
 
-  // Fetch user's tasks
-  const userTasks = await prisma.task.findMany({
-    where: { userId },
-    orderBy: { deadline: "asc" },
-    take: 5,
-  });
+  if (!user.facultyId || user.semester === null) {
+    throw new Error("Student academic profile is incomplete");
+  }
 
-  // Calculate unread messages (placeholder - implement based on your Message model)
-  const unreadMessages = 0;
+  const contentWhere = {
+    facultyId: user.facultyId,
+    semester: user.semester,
+    status: "ACTIVE" as const,
+  };
+
+  const [userTasks, unreadMessages, visibleContent] = await Promise.all([
+    prisma.task.findMany({
+      where: { userId },
+      orderBy: [{ status: "asc" }, { deadline: "asc" }],
+      take: 5,
+    }),
+    prisma.message.count({ where: { recipientId: userId, isRead: false } }),
+    prisma.content.findMany({
+      where: contentWhere,
+      select: {
+        id: true,
+        title: true,
+        module: true,
+        semester: true,
+        week: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+  ]);
+
+  const accessRows = visibleContent.length
+    ? await prisma.contentAccess.findMany({
+        where: { userId, contentId: { in: visibleContent.map((item) => item.id) } },
+        select: { contentId: true },
+        distinct: ["contentId"],
+      })
+    : [];
+  const accessedContentIds = new Set(accessRows.map((row) => row.contentId));
 
   // Calculate upcoming deadlines
   const now = new Date();
@@ -74,13 +110,12 @@ export async function getStudentDashboardData(
 
   // Get AI queries left
   const aiQueriesLeft = user.freeQueriesRemaining ?? 20;
-  const resetDate = user.freeQueriesResetAt
-    ? new Date(user.freeQueriesResetAt).toLocaleDateString()
-    : "8 days";
-  const aiQueriesReset = `Resets in ${resetDate}`;
+  const aiQueriesReset = user.freeQueriesResetAt
+    ? `Resets ${new Date(user.freeQueriesResetAt).toLocaleDateString()}`
+    : "Daily allowance";
 
   // Format tasks for display
-  const formattedTasks = userTasks.map((task, index) => {
+  const formattedTasks = userTasks.map((task) => {
     const colors = [
       { bg: "#fde8e8", text: "#c0392b" },
       { bg: "#e8f4fd", text: "#1a6fa3" },
@@ -88,15 +123,7 @@ export async function getStudentDashboardData(
       { bg: "#e8f4fd", text: "#1a6fa3" },
       { bg: "#eafaf1", text: "#1e8449" },
     ];
-    const badgeColors: Array<"bg-r" | "bg-y" | "bg-b" | "bg-g"> = [
-      "bg-r",
-      "bg-r",
-      "bg-y",
-      "bg-b",
-      "bg-g",
-    ];
-    const color = colors[index % colors.length];
-    const badges = ["Urgent", "Urgent", "Pending", "In progress", "Done"];
+    const color = colors[Math.abs(task.id.length) % colors.length];
     const title = task.title.slice(0, 25);
     const initials = title
       .split(" ")
@@ -117,13 +144,26 @@ export async function getStudentDashboardData(
       else dueText = `in ${daysUntil} days`;
     }
 
+    const isOverdue = Boolean(task.deadline && new Date(task.deadline) < now);
+    const badge = task.status === "COMPLETED"
+      ? "Done"
+      : isOverdue
+        ? "Overdue"
+        : task.priority === "HIGH"
+          ? "High priority"
+          : task.priority === "LOW"
+            ? "Low priority"
+            : "Pending";
+    const badgeColor: "bg-r" | "bg-y" | "bg-b" | "bg-g" =
+      task.status === "COMPLETED" ? "bg-g" : isOverdue || task.priority === "HIGH" ? "bg-r" : task.priority === "LOW" ? "bg-b" : "bg-y";
+
     return {
       id: task.id,
-      code: `TASK-${String(index + 1).padStart(3, "0")}`,
-      name: title,
+      title,
+      description: task.description,
       due: dueText,
-      badge: badges[index % badges.length],
-      badgeColor: badgeColors[index % badgeColors.length],
+      badge,
+      badgeColor,
       avatar: {
         bg: color.bg,
         text: color.text,
@@ -132,59 +172,38 @@ export async function getStudentDashboardData(
     };
   });
 
-  // Get active courses (estimate based on content access)
-  const contentAccess = await prisma.contentAccess.findMany({
-    where: { userId },
-    include: { content: true },
-    take: 20,
-  });
+  const courseTotals = new Map<string, { total: number; accessed: number }>();
+  const weekTotals = new Map<number, { total: number; accessed: number }>();
+  for (const item of visibleContent) {
+    const seen = accessedContentIds.has(item.id);
+    const course = courseTotals.get(item.module) ?? { total: 0, accessed: 0 };
+    course.total++;
+    if (seen) course.accessed++;
+    courseTotals.set(item.module, course);
 
-  const courseMap = new Map<
-    string,
-    { progressPercent: number; name: string }
-  >();
-  contentAccess.forEach((item) => {
-    if (!courseMap.has(item.content.module)) {
-      courseMap.set(item.content.module, {
-        progressPercent: Math.floor(Math.random() * 60 + 20),
-        name: item.content.module,
-      });
-    }
-  });
-
-  const activeCourses = Array.from(courseMap.values()).slice(0, 3);
-
-  // Fallback to mock courses if no real data
-  if (activeCourses.length === 0) {
-    activeCourses.push(
-      { progressPercent: 23, name: "Data Structures" },
-      { progressPercent: 53, name: "Product Design" },
-      { progressPercent: 96, name: "Entrepreneurship" }
-    );
+    const week = weekTotals.get(item.week) ?? { total: 0, accessed: 0 };
+    week.total++;
+    if (seen) week.accessed++;
+    weekTotals.set(item.week, week);
   }
 
-  // Calculate week progress (based on task completion per week)
-  const weekProgress = [
-    { week: 1, progressPercent: 100 },
-    { week: 2, progressPercent: 70 },
-    { week: 3, progressPercent: 35 },
-    { week: 4, progressPercent: 5 },
-  ].map((w) => ({
-    ...w,
-    participants: formattedTasks.slice(0, 3).map((t) => ({
-      initials: t.avatar.initials,
-    })),
-  }));
+  const activeCourses = Array.from(courseTotals, ([name, counts]) => ({
+    name,
+    semester: user.semester!,
+    progressPercent: Math.round((counts.accessed / counts.total) * 100),
+  })).slice(0, 3);
 
-  // Get enrolled count
-  const enrolledCount = await prisma.contentAccess.count({
-    where: { userId },
-  });
+  const weekProgress = Array.from(weekTotals, ([week, counts]) => ({
+    week,
+    progressPercent: Math.round((counts.accessed / counts.total) * 100),
+  }))
+    .sort((a, b) => a.week - b.week)
+    .slice(0, 4);
 
   return {
     studentName: user.name || "Student",
-    faculty: user.faculty?.name || "Faculty of Engineering",
-    semester: user.semester || 1,
+    faculty: user.faculty?.name || "Faculty not assigned",
+    semester: user.semester,
     unreadMessages,
     upcomingDeadlines: upcomingTasks.length,
     nextDeadlineDays,
@@ -193,6 +212,12 @@ export async function getStudentDashboardData(
     tasks: formattedTasks,
     activeCourses,
     weekProgress,
-    enrolledCount: Math.min(enrolledCount, 10), // Cap at 10 for display
+    enrolledCount: courseTotals.size,
+    recentMaterials: visibleContent.slice(0, 4).map(({ id, title, module, week }) => ({
+      id,
+      title,
+      module,
+      week,
+    })),
   };
 }

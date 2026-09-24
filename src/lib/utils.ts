@@ -40,9 +40,11 @@ export function stripHtmlTags(input: string): string {
 
 export function generateReferralCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const random = new Uint8Array(8);
+  crypto.getRandomValues(random);
   let code = "";
-  for (let i = 0; i < 8; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+  for (const value of random) {
+    code += chars[value % chars.length];
   }
   return code;
 }

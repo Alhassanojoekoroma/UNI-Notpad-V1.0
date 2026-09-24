@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const { sourceContentIds, narrationStyle, voiceId } = parsed.data;
 
     // Validate sources before deducting rate limit
-    const sources = await fetchSourceContent(sourceContentIds);
+    const sources = await fetchSourceContent(sourceContentIds, session.user);
     if (!sources.length) {
       return NextResponse.json(
         { success: false, error: "No valid source content found" },

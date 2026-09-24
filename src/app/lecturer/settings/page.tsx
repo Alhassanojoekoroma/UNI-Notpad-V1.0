@@ -7,26 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ExportDataCard } from "@/components/settings/export-data-card";
+import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 
 export default function LecturerSettingsPage() {
   const { user, update: updateSession } = useSession();
   const queryClient = useQueryClient();
   const [name, setName] = useState(user?.name ?? "");
 
-  const { data: profileData } = useQuery({
+  const { data: profileData, isLoading, isError } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const res = await fetch("/api/profile");
@@ -34,11 +25,8 @@ export default function LecturerSettingsPage() {
     },
   });
 
-  // Sync name when profile loads
   const profile = profileData?.data;
-  if (profile?.name && name === "" && user?.name !== profile.name) {
-    setName(profile.name);
-  }
+  const displayName = name || profile?.name || user?.name || "";
 
   const updateProfile = useMutation({
     mutationFn: async (data: { name: string }) => {
@@ -57,23 +45,21 @@ export default function LecturerSettingsPage() {
     },
   });
 
-  const deleteAccount = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/profile", { method: "DELETE" });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error);
-    },
-    onSuccess: () => {
-      window.location.href = "/login";
-    },
-  });
-
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) {
-      updateProfile.mutate({ name: name.trim() });
+    if (displayName.trim()) {
+      updateProfile.mutate({ name: displayName.trim() });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,6 +69,14 @@ export default function LecturerSettingsPage() {
           Manage your profile and account preferences
         </p>
       </div>
+
+      {isError && (
+        <Card role="alert">
+          <CardContent className="py-6 text-sm text-destructive">
+            We couldn&apos;t load your profile. Refresh the page and try again.
+          </CardContent>
+        </Card>
+      )}
 
       {/* Profile */}
       <Card>
@@ -96,7 +90,7 @@ export default function LecturerSettingsPage() {
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
-                value={name}
+                value={displayName}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
                 required
@@ -133,79 +127,23 @@ export default function LecturerSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Notifications */}
+      <ExportDataCard />
+
       <Card>
         <CardHeader>
-          <CardTitle>Notifications</CardTitle>
+          <CardTitle className="text-destructive">Danger Zone</CardTitle>
           <CardDescription>
-            Choose what notifications you receive
+            Deactivate your account and schedule its data for deletion.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Notification preferences are coming soon. You currently receive
-            notifications for new messages and content flags.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Account */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account</CardTitle>
-          <CardDescription>Manage your account</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm font-medium">Data Export</p>
-            <p className="text-sm text-muted-foreground">
-              Download a copy of your data including uploaded content and
-              messages.
-            </p>
-            <Button variant="outline" className="mt-2" disabled>
-              Request Export (Coming Soon)
-            </Button>
-          </div>
-
-          <Separator />
-
-          <div>
-            <p className="text-sm font-medium text-destructive">
-              Delete Account
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Permanently delete your account and all associated data. You have a
-              7-day grace period to recover your account.
-            </p>
-            <AlertDialog>
-              <AlertDialogTrigger
-                render={
-                  <Button variant="destructive" className="mt-2">
-                    Delete Account
-                  </Button>
-                }
-              />
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will schedule your account for deletion. You have 7 days
-                    to contact support and recover your account before it is
-                    permanently removed.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteAccount.mutate()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {deleteAccount.isPending ? "Deleting..." : "Delete Account"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+        <CardContent>
+          <DeleteAccountDialog
+            pendingDeletion={!!profile?.deletedAt}
+            hasPassword={profile?.hasPassword ?? true}
+            onCancelled={() =>
+              queryClient.invalidateQueries({ queryKey: ["profile"] })
+            }
+          />
         </CardContent>
       </Card>
     </div>

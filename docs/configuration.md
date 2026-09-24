@@ -14,6 +14,12 @@ Copy `.env.example` to `.env.local` and fill in the values you need.
 | `AUTH_SECRET` | Encrypts session tokens. Generate with `npx auth secret` | A random 32+ character string |
 | `NEXTAUTH_URL` | Base URL of the application | `http://localhost:3000` or `https://yourdomain.com` |
 | `NEXT_PUBLIC_ROOT_DOMAIN` | Root domain used by `proxy.ts` for subdomain routing | `localhost:3000` or `yourdomain.com` |
+| `NEXT_PUBLIC_APP_URL` | Absolute URL used in outbound links | `https://yourdomain.com` |
+| `SETUP_TOKEN` | One-time server-held secret required by the installation wizard | A random 32-byte value |
+
+Set `AUTH_TRUST_HOST=true` only behind a trusted reverse proxy that supplies the
+correct host headers. `NEXT_PUBLIC_MARKETING_URL` is an optional external link;
+the marketing website is not served by this repository.
 
 ### OAuth providers (optional)
 
@@ -76,9 +82,18 @@ Optional. The AI study assistant's audio overview feature falls back to the brow
 | `STRIPE_SECRET_KEY` | Stripe secret key | [Stripe Dashboard](https://dashboard.stripe.com/) > Developers > API keys |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | Stripe Dashboard > Developers > Webhooks |
 
-Monime handles mobile money payments in Sierra Leone. Stripe handles card payments internationally. Both are optional -- without them, the token purchase feature is disabled and students rely on the free daily AI query allocation.
+Payment processing is not implemented. Both webhook routes return `501` and the
+purchase UI is disabled even if these variables are set. Do not register the
+webhook endpoints with a provider until signature verification, idempotency,
+transaction reconciliation, and tests have been implemented.
 
-For Stripe webhooks, point the endpoint to `https://yourdomain.com/api/webhooks/stripe`.
+### Local demo seed
+
+The demo seed is development-only. It refuses to run under
+`NODE_ENV=production` and requires `ALLOW_DEMO_SEED=true` plus a
+`DEMO_ADMIN_PASSWORD` of at least 12 characters. `SEED_MODE=full` additionally
+requires `DEMO_LECTURER_PASSWORD` and `DEMO_STUDENT_PASSWORD`. Use only an
+isolated database; the seed updates demo-account passwords when rerun.
 
 ---
 
@@ -121,7 +136,9 @@ These settings are configured through the admin panel at `admin.yourdomain.com/s
 
 ### Service keys (optional overrides)
 
-These can override the corresponding environment variables. Useful if the admin wants to change keys without redeploying.
+These legacy fields can override corresponding environment variables. They are
+stored in plaintext in PostgreSQL. Hardened deployments should use environment
+secrets instead and leave the database fields empty.
 
 | Field | Type | Description |
 |-------|------|-------------|

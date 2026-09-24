@@ -255,55 +255,31 @@ describe("GET /api/settings/public", () => {
   });
 });
 
-// ── GET /api/tokens ───────────────────────────────────────────────
+// ── Payment webhooks ──────────────────────────────────────────────
+//
+// These used to be `{status:"ok"}` stubs answering 200. Telling a payment
+// provider an event was handled when nothing was recorded suppresses the
+// provider's retries, so they now answer 501 until real handlers exist.
 
-describe("GET /api/tokens", () => {
-  it("returns status ok (200)", async () => {
-    const { GET } = await import("@/app/api/tokens/route");
-    const response = await GET();
-    const json = await parseResponse<any>(response);
+describe("POST /api/webhooks/monime", () => {
+  it("reports the handler as not implemented (501)", async () => {
+    const { POST } = await import("@/app/api/webhooks/monime/route");
+    const response = await POST();
+    const json = await parseResponse<{ success: boolean }>(response);
 
-    expect(response.status).toBe(200);
-    expect(json.status).toBe("ok");
+    expect(response.status).toBe(501);
+    expect(json.success).toBe(false);
   });
 });
 
-// ── GET /api/webhooks/monime ──────────────────────────────────────
+describe("POST /api/webhooks/stripe", () => {
+  it("reports the handler as not implemented (501)", async () => {
+    const { POST } = await import("@/app/api/webhooks/stripe/route");
+    const response = await POST();
+    const json = await parseResponse<{ success: boolean }>(response);
 
-describe("GET /api/webhooks/monime", () => {
-  it("returns status ok (200)", async () => {
-    const { GET } = await import("@/app/api/webhooks/monime/route");
-    const response = await GET();
-    const json = await parseResponse<any>(response);
-
-    expect(response.status).toBe(200);
-    expect(json.status).toBe("ok");
-  });
-});
-
-// ── GET /api/webhooks/stripe ──────────────────────────────────────
-
-describe("GET /api/webhooks/stripe", () => {
-  it("returns status ok (200)", async () => {
-    const { GET } = await import("@/app/api/webhooks/stripe/route");
-    const response = await GET();
-    const json = await parseResponse<any>(response);
-
-    expect(response.status).toBe(200);
-    expect(json.status).toBe("ok");
-  });
-});
-
-// ── GET /api/referrals ────────────────────────────────────────────
-
-describe("GET /api/referrals", () => {
-  it("returns status ok (200)", async () => {
-    const { GET } = await import("@/app/api/referrals/route");
-    const response = await GET();
-    const json = await parseResponse<any>(response);
-
-    expect(response.status).toBe(200);
-    expect(json.status).toBe("ok");
+    expect(response.status).toBe(501);
+    expect(json.success).toBe(false);
   });
 });
 

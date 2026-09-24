@@ -12,8 +12,6 @@ import {
 import {
   createTestUser,
   createTestAppSettings,
-  createTestFaculty,
-  createTestProgram,
   createTestTokenBalance,
   resetFixtureCounter,
 } from "../helpers/fixtures";
@@ -34,18 +32,22 @@ afterAll(async () => {
 /** Seed faculty, program, and a user */
 async function seedUser(overrides: Record<string, unknown> = {}) {
   const faculty = await testPrisma.faculty.create({
-    data: { id: "test-faculty-id", name: "Engineering", code: "ENG" },
+    data: { id: "fac-ai", name: "Engineering", code: "ENG_AI" },
   });
-  await testPrisma.program.create({
+  const program = await testPrisma.program.create({
     data: {
-      id: "test-program-id",
+      id: "prog-ai",
       name: "Computer Science",
-      code: "CS",
+      code: "CS_AI",
       facultyId: faculty.id,
     },
   });
   const user = await testPrisma.user.create({
-    data: createTestUser(overrides),
+    data: createTestUser({
+      facultyId: faculty.id,
+      programId: program.id,
+      ...overrides,
+    }),
   });
   return { faculty, user };
 }
